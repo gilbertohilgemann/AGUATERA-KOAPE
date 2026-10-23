@@ -1,0 +1,145 @@
+Convenciones de Proyecto: Backend Django + Frontend React
+
+2026-09-20 · @u_qTt92cH8SFT9mTF__RjWrg
+
+Propósito de este documento
+
+Este documento es de infraestructura y convenciones, no de negocio. Se usa así:
+
+1. Al arrancar cualquier proyecto nuevo, se le pasa este documento completo a Claude y se le pide que lo aplique tal cual, de punta a punta, sin saltear ni resumir secciones.
+2. Por separado, se define qué hay que construir en ese proyecto puntual: los modelos de datos del negocio, las páginas del sitio, las funcionalidades específicas del cliente. Eso varía proyecto a proyecto; lo de este documento, no.
+3. Todo lo que está acá es obligatorio por defecto (estructura, idioma, módulos de Migración/Backup, scripts de instalación, seguridad), salvo el módulo de Monitoreo de Visitas, marcado explícitamente como opcional según el proyecto.
+
+No es una plantilla de código para copiar y pegar — es la lista de decisiones ya tomadas (y los errores ya cometidos y corregidos) para no volver a discutirlas ni repetirlas de cero en cada proyecto nuevo.
+
+Esta es la guía de arranque para cualquier proyecto nuevo de software a medida (Django + React) que encaremos: fija la estructura, los módulos reutilizables y las convenciones que ya probamos en producción con Koape Sistemas EAS. Para usarla, se le pasa este documento a Claude al arrancar un proyecto nuevo y se le pide que la aplique tal cual, ajustando solo los modelos de datos propios del negocio de cada cliente.
+
+No es una plantilla de código para copiar y pegar — es la lista de decisiones ya tomadas (y los errores ya cometidos y corregidos) para no volver a discutirlas ni repetirlas de cero en cada proyecto.
+
+Estructura del proyecto y stack tecnológico
+
+backend/ y frontend/ como carpetas hermanas, sin mezclar nunca su código.
+
+| Capa | Stack |
+| Backend | Django + Django REST Framework, apps separadas por dominio de negocio |
+| Frontend | React + Vite + TypeScript + Tailwind CSS v4, consumiendo la API vía axios |
+| Base de datos | SQLite por defecto (cero configuración), intercambiable a PostgreSQL sin perder datos desde el propio admin |
+
+Reglas fijas:
+
+- El frontend nunca habla directo con la base de datos ni tiene contenido hardcodeado: todo lo que se ve en el sitio público sale de la API, y todo lo que carga la API sale del admin de Django.
+- Cada entidad grande del negocio va en su propia app de Django (ej. core, news, team en Koape), no todo apilado en una sola app gigante.
+- Apps de infraestructura propia (migración, backup, monitoreo) van separadas de las apps de contenido — ver "Patrón de apps sin tabla" más abajo.
+
+Idioma: todo en castellano
+
+Código, comentarios, docstrings, mensajes de la API, plantillas del admin y el README van siempre en castellano — se traduce todo lo que escribimos nosotros.
+
+Se deja en inglés únicamente lo que genera una herramienta y se regenera solo en el próximo cambio: migraciones de Django, el manage.py/wsgi.py/asgi.py estándar del scaffold, y licencias o READMEs de librerías de terceros (node_modules, paquetes de Python). Traducir eso no aporta nada y se pierde apenas se regenera.
+
+Patrón de apps "sin tabla" para paneles del admin
+
+Para agregar secciones propias al admin de Django (migración de base, backups, manuales, estadísticas) sin ensuciar los modelos reales del negocio:
+
+1. Un modelo con managed = False y default_permissions = ('view',) — existe solo para que Django le arme una entrada en el menú del admin, no tiene tabla real.
+2. Su ModelAdmin sobreescribe changelist_view para renderizar una plantilla propia (render(request, 'admin/<app>/<panel>.html', context)) en vez del listado estándar que esperaría un modelo real.
+3. has_add_permission y has_delete_permission siempre en False.
+4. Cuando hace falta una acción o descarga (por ejemplo, el backup), se le agregan URLs propias vía get_urls().
+
+Este patrón es la base de los tres módulos de infraestructura de este documento: Migración, Backup y Monitoreo de Visitas.
+
+Módulo de Migración de Base de Datos
+
+Objetivo: arrancar rápido en SQLite (cero configuración), cargar contenido real, y migrar a PostgreSQL cuando el proyecto esté listo para producción — sin perder nada, sin bajar el sitio, desde el propio admin.
+
+Cómo se implementa:
+
+- Lógica compartida en un módulo tipo db_migration.py: usa dumpdata/loaddata de Django en vez de copiar tabla por tabla a mano, así resuelve solo el orden de FKs y las relaciones M2M.
+- Registra la base destino como un alias de conexión temporal (connections.databases[alias] = {...}) en vez de tocar settings.DATABASES, para no tener que reiniciar el proceso.
+- Tres acciones en el panel: migrar a Postgres, volver a SQLite, y traer los datos de Postgres a SQLite sin cambiar de motor — esta última es clave antes de armar un backup, para poder llevar los datos reales a otra PC o servidor sin tener que restaurar un dump SQL a mano.
+- Se expone también como comando de terminal (manage.py migrate_to_postgres), para quien prefiera correrlo por SSH en vez de por el panel.
+
+Módulo de Backup completo
+
+Un botón en el admin arma un .zip descargable con: todo el código (backend + frontend), media/ (archivos subidos), la base SQLite tal cual esté, y un pg_dump si el sitio corre sobre PostgreSQL.
+
+Excluye siempre (se regeneran solas, no tiene sentido respaldarlas): venv/, node_modules/, __pycache__/, dist/, .vite/, staticfiles/.
+
+Excluye siempre, por seguridad, cualquier rastro de con qué repositorio está vinculada la instalación: la carpeta .git/ completa (remoto, historial, credenciales que pueda tener guardadas) y los archivos sueltos de control de versiones (.gitignore, .gitattributes, .gitmodules, .github/). Un backup nunca debe delatar dónde vive el repositorio, sea GitHub, GitLab o cualquier otro.
+
+Módulo de Monitoreo de Visitas
+
+Panel de admin de solo lectura (los datos los cargan los visitantes anónimos al navegar, no se editan a mano) con filtro de rango de fechas: total de visitas, tiempo promedio de navegación, visitas por sección, qué fichas puntuales se abrieron (con tiempo promedio), país/navegador/sistema operativo/dispositivo, y el detalle de cada visita individual con su recorrido completo página por página.
+
+Implementación:
+
+- Dos modelos reales (Visit, PageView) — con tabla, a diferencia de Migración/Backup — pero el ModelAdmin sigue siendo de solo lectura.
+- El frontend reporta cada cambio de ruta a una API pública sin bloquear la navegación ("fire and forget": nunca un await, siempre con .catch()), y usa sendBeacon al salir para cerrar la duración de la última página.
+- Bots/crawlers se detectan por el User-Agent, se guardan pero no se cuentan en las estadísticas.
+
+Dos lecciones aprendidas a mano dura, aplicar siempre:
+
+1. Nombres de ruta: nunca usar palabras como analytics, track o pageview en la URL del endpoint de tracking — los bloqueadores de anuncios (Brave Shields, uBlock Origin, etc.) las filtran por patrón aunque el pedido sea al propio servidor. Usar nombres neutros (ej. /api/stats/hit/, /api/stats/bye/).
+2. crypto.randomUUID(): no existe en HTTP plano sobre un host que no sea localhost (restricción de "contexto seguro" del navegador) — sin un generador de UUID de respaldo, el sitio se cae entero en producción hasta que haya HTTPS.
+
+País de origen: se resuelve con la base offline y gratuita GeoLite2-Country de MaxMind (nunca un servicio externo por cada visita, para no mandarle la IP de nadie a un tercero) — es opcional, si el archivo no está instalado el resto del panel funciona igual, solo sin esa columna.
+
+Como cualquier endpoint público de escritura, lleva throttling para que no se pueda usar para inundar la base.
+
+Manual de Usuario dentro del admin
+
+Una sección más del admin (mismo patrón "sin tabla"), pensada para quien carga contenido día a día — no para programadores.
+
+Estilo: acordeón (<details>/<summary>) con una sección numerada por área del admin, en lenguaje simple y directo, con recuadros de tip (💡) y advertencia (⚠) donde haga falta, y una maqueta visual de cómo se ve en el sitio público cuando ayuda a entender el resultado de cargar algo.
+
+Se actualiza en el momento, no al final: cada vez que se agrega un módulo o sección de contenido nueva al admin, se le suma su entrada correspondiente al manual como parte del mismo trabajo — nunca queda como tarea pendiente aparte.
+
+Usuario administrador fijo
+
+El instalador (Linux y Windows) crea o resetea, en cada instalación, un usuario admin con una contraseña fija conocida de antemano — así nunca se pierde el acceso al panel, ni siquiera si se olvidó una contraseña anterior. La operación es idempotente (correr el instalador de nuevo no rompe nada, solo confirma el mismo usuario) y siempre se avisa, en el resumen final del instalador, que conviene cambiar esa contraseña apenas se entra por primera vez al admin real.
+
+Scripts de instalación y arranque en Linux
+
+install.sh (se corre una sola vez, o de nuevo al actualizar código): revisa qué dependencias del sistema faltan y pide permiso explícito antes de instalarlas, arma el entorno virtual de Python y node_modules, deja el sitio funcionando en SQLite por defecto, trata PostgreSQL como un paso aparte y opcional, y al final pregunta si activar el arranque automático al reiniciar el servidor (systemd) — solo si se contesta que sí.
+
+start.sh: subcomandos start|stop|status|restart|update. Procesos en segundo plano reales (--daemon/nohup), PID guardado en .run/, logs en logs/. El subcomando update es el que se usa para desplegar una versión nueva del código: reinstala dependencias, aplica migraciones, rearma estáticos y el build del frontend, y reinicia los procesos — sobrescribir los archivos por sí solo nunca alcanza.
+
+Regla de oro, siempre: nunca asumir que el servidor está vacío. Antes de tocar un puerto o instalar algo a nivel sistema, revisar si ya hay algo corriendo ahí y no pisarlo — preguntar antes de instalar cualquier cosa a nivel SO, y abortar con un mensaje claro (nunca en silencio) si un puerto ya está ocupado por otra cosa que no es nuestra.
+
+Ambos scripts calculan su propia ubicación al arrancar (PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)") — nunca una ruta escrita a mano — así funcionan sin importar en qué carpeta del servidor se instale el proyecto.
+
+Scripts de arranque en Windows
+
+start.bat es solo un lanzador de una línea (con bypass de política de ejecución de PowerShell) que llama a start.ps1, donde vive la lógica real — mismo espíritu que start.sh: subcomandos start|stop|status|restart|logs, procesos en segundo plano sin abrir ventanas nuevas (Start-Process -WindowStyle Hidden, salida redirigida a logs\), PID guardado en .run\.
+
+Lección aprendida a mano dura — matar el árbol completo: tanto manage.py runserver (por el autoreload) como npm encadenan varios procesos hijos, hasta 3-4 niveles de profundidad. Matar solo el PID guardado deja huerfanos vivos ocupando el puerto. Hay que usar taskkill /PID <pid> /T /F (mata todo el árbol de una sola vez, sin importar la profundidad) — nunca Stop-Process sobre un único PID ni un Get-CimInstance de un solo nivel.
+
+Igual que en Linux: la ruta del proyecto se calcula sola ($PSScriptRoot en el .ps1, %~dp0 si hace falta en el .bat) — nunca escrita a mano — y antes de arrancar se revisa si el puerto ya está ocupado por algo ajeno, con el mismo mensaje claro de "no interfiero con lo que ya esté corriendo".
+
+Desarrollo local sin fricción vs. producción estricta
+
+Para poder probar el sitio desde el celular u otra PC de la misma red Wi-Fi sin ir editando IPs a mano cada vez que cambian:
+
+- ALLOWED_HOSTS = ['*'] y CORS_ALLOW_ALL_ORIGINS = True solo cuando DEBUG=True. En producción (DEBUG=False) se exige siempre la lista explícita de hosts/orígenes que arma el instalador — ahí sí importa por seguridad real.
+- El frontend arma la URL de la API sola, a partir del host desde el que se está viendo la página (window.location.hostname), y solo usa una variable de entorno explícita (VITE_API_URL) cuando está seteada — pensada para el caso de producción con el backend en otro host/puerto.
+- Vite: server: { host: true, allowedHosts: true } en vite.config.ts, para que el propio servidor de desarrollo acepte pedidos con cualquier IP de la red local, no solo localhost.
+
+Buenas prácticas de seguridad aprendidas
+
+- Honeypot anti-spam en todo formulario público (campo oculto que un humano nunca completa; si llega lleno, se simula un éxito normal sin guardar nada — nunca se le avisa al bot que fue detectado).
+- Throttling (ScopedRateThrottle o equivalente) en todo endpoint público de escritura: contacto, comentarios, tracking de visitas.
+- El backup nunca incluye referencias al repositorio de código (ver Módulo de Backup) ni contraseñas fuera de lo que ya vive en .env.
+- El usuario admin fijo se documenta siempre junto con la advertencia de cambiar la contraseña — comodidad de instalación no es lo mismo que dejarlo así para siempre.
+- SECRET_KEY real generada en el momento de instalar (nunca el valor de ejemplo del repo), y obligatoria vía variable de entorno cuando DEBUG=False — el proceso ni arranca si falta.
+
+Checklist para arrancar un proyecto nuevo
+
+1. Crear backend/ (Django + DRF) y frontend/ (Vite + React + TypeScript + Tailwind) como carpetas hermanas.
+2. Definir los modelos propios del negocio, en castellano (verbose_name en cada campo, docstrings explicando decisiones no obvias).
+3. Armar el módulo de Migración de Base de Datos (SQLite ⇄ Postgres) desde el día uno, aunque el proyecto arranque chico.
+4. Armar el módulo de Backup completo, con las exclusiones de siempre (venv, node_modules, .git y afines).
+5. Si el proyecto lo justifica, sumar el módulo de Monitoreo de Visitas — aplicando las dos lecciones de nombres de ruta y crypto.randomUUID.
+6. Escribir el Manual de Usuario en el admin a medida que se cargan las secciones de contenido, no como tarea aparte al final.
+7. install.sh + start.sh (Linux) y start.bat + start.ps1 (Windows), con el usuario admin fijo, rutas calculadas dinámicamente (nunca hardcodeadas) y la regla de "no pisar lo que ya esté corriendo".
+8. README con secciones separadas Linux/Windows, tabla de modelos de datos, y un apartado de "Patrones importantes" documentando las decisiones no obvias del código.
+9. Todo el código, comentarios y documentación en castellano desde el primer commit — no dejarlo para "después".

@@ -1,0 +1,49 @@
+# Generado por start (no editar: se rehace en cada arranque con las IP actuales).
+# Servidor web con HTTPS: entrega el sistema (frontend ya compilado) y reenvía /api, /admin y /static
+# al backend, que en este modo solo escucha en 127.0.0.1. Certificado de una autoridad local propia.
+{
+	admin off
+	auto_https disable_redirects
+	skip_install_trust
+	storage file_system "{{DATOS}}"
+	local_certs
+}
+
+{{SITIOS}} {
+	tls internal
+	encode zstd gzip
+	@servidor path /api/* /admin /admin/* /static/* /media/*
+	handle @servidor {
+		reverse_proxy 127.0.0.1:{{PUERTO_API}}
+	}
+	handle /certificado.crt {
+		root * "{{DATOS}}/pki/authorities/local"
+		rewrite * /root.crt
+		file_server
+	}
+	handle {
+		root * "{{DIST}}"
+		try_files {path} /index.html
+		file_server
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+		-Server
+	}
+}
+
+# Las direcciones viejas (http) llevan a la nueva, y de acá se baja el certificado para instalarlo en
+# otras computadoras y celulares (antes de confiar en él, el navegador no abre bien la versión https).
+http://:{{PUERTO_WEB}} {
+	handle /certificado.crt {
+		root * "{{DATOS}}/pki/authorities/local"
+		rewrite * /root.crt
+		file_server
+	}
+	handle {
+		redir https://{host}{{SUFIJO_PUERTO}}{uri}
+	}
+}

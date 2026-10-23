@@ -1,0 +1,65 @@
+{% extends "admin/base_site.html" %}
+{% block extrastyle %}{{ block.super }}
+<style>
+  .manual details { border:1px solid #C9CACC; border-radius:8px; margin:10px 0; background:var(--body-bg); max-width:900px }
+  .manual summary { cursor:pointer; padding:12px 16px; font-family:"Exo 2","Segoe UI",sans-serif; font-weight:700; font-size:1.05em }
+  .manual .cuerpo { padding:0 18px 14px }
+  .tip { background:#fff8d6; border-left:4px solid #F9C610; padding:8px 12px; margin:8px 0; color:#232323 }
+  .alerta { background:#fde8ec; border-left:4px solid #EA284E; padding:8px 12px; margin:8px 0; color:#232323 }
+  .maqueta { border:1px dashed #97989C; border-radius:6px; padding:10px; font-family:monospace; background:#f6f6f7; color:#232323 }
+</style>{% endblock %}
+{% block content %}
+<div class="manual">
+<p>Este manual es para quien administra la <strong>plataforma</strong>. Los usuarios de cada aguatera tienen su propio manual dentro del sistema (menú <b>Manual</b>).</p>
+
+<details open><summary>1. Qué se hace desde este panel</summary><div class="cuerpo">
+<p>Desde acá se dan de alta las instituciones (aguateras, juntas de saneamiento), se suspenden, archivan o reactivan, se crean los usuarios de la plataforma, se genera el backup y se migra la base de datos.</p>
+<div class="alerta">⚠ El día a día de cada institución (usuarios, roles, y en las próximas fases clientes, lecturas, facturas…) lo maneja cada institución desde su sistema, no desde acá.</div>
+</div></details>
+
+<details><summary>2. Dar de alta una institución</summary><div class="cuerpo">
+<ol>
+<li>Menú <b>Plataforma → Instituciones → Añadir institución</b>.</li>
+<li><b>Código institucional</b>: lo escriben los usuarios al ingresar (ej. <code>JUNTA-SL</code>). Solo mayúsculas, números y guiones. <b>No se puede cambiar después.</b></li>
+<li>Complete nombre o razón social, RUC y datos de contacto.</li>
+<li>En <b>Administrador inicial</b> defina usuario y contraseña. Pásele esos datos al cliente: al primer ingreso el sistema le pide cambiar la contraseña.</li>
+</ol>
+<div class="maqueta">Pantalla de ingreso del sistema<br>Código de institución: JUNTA-SL · Usuario: admin · Contraseña: (la inicial)</div>
+<div class="tip">💡 Junto con la institución se crean los roles «Cobrador» y «Consulta», que la institución puede editar.</div>
+</div></details>
+
+<details><summary>3. Suspender, archivar o reactivar</summary><div class="cuerpo">
+<p>En la lista de instituciones, botón <b>Cambiar estado</b>. Siempre se pide un motivo, que queda en la auditoría.</p>
+<ul><li><b>Suspendida</b>: nadie de la institución puede ingresar y se cierran las sesiones abiertas en el acto.</li>
+<li><b>Archivada</b>: la institución dejó de usar el sistema.</li>
+<li><b>Activa</b>: vuelve a funcionar.</li></ul>
+<div class="alerta">⚠ Nunca se borra una institución ni sus datos.</div>
+</div></details>
+
+<details><summary>4. Usuarios de la plataforma y de las instituciones</summary><div class="cuerpo">
+<p>Menú <b>Usuarios y permisos → Usuarios</b>. Los que no tienen institución son usuarios de este panel. Los de una institución se ven como <code>CODIGO/usuario</code> y los administra cada institución.</p>
+<p>Si una institución perdió el acceso de su administrador: abra ese usuario y use <b>Restablecer contraseña</b> (enlace en el campo Contraseña). Queda en la auditoría y el usuario deberá cambiarla al ingresar.</p>
+<div class="alerta">⚠ El instalador crea o restablece siempre el usuario <code>admin</code> de la plataforma con la contraseña de <code>backend/.env</code>. Cámbiela apenas ingrese por primera vez.</div>
+</div></details>
+
+<details><summary>5. Auditoría</summary><div class="cuerpo">
+<p>Menú <b>Auditoría</b>: quién hizo qué, cuándo, desde qué IP, con los datos antes y después. Es de solo lectura: no se puede editar ni borrar. Se filtra por institución, acción y resultado (por ejemplo, ingresos fallidos).</p>
+</div></details>
+
+<details><summary>6. Backup completo</summary><div class="cuerpo">
+<p>Menú <b>Respaldos → Backup completo</b>: descarga un .zip con el código, los archivos subidos y la base de datos. También muestra el estado de seguridad de la instalación.</p>
+<div class="alerta">⚠ Contiene los datos de todas las instituciones: guárdelo en un lugar seguro.</div>
+<div class="tip">💡 En el servidor el respaldo se hace solo todos los días (03:20) y se conservan los últimos 4.</div>
+</div></details>
+
+<details><summary>7. Migración de base de datos (SQLite ⇄ PostgreSQL)</summary><div class="cuerpo">
+<p>El sistema arranca en SQLite. Para producción, en <b>Migración de base de datos</b> cargue los datos del servidor PostgreSQL, pruebe la conexión y presione <b>Migrar a PostgreSQL</b>. Después reinicie el sistema.</p>
+<div class="tip">💡 «Traer datos a SQLite» copia los datos de PostgreSQL a un archivo SQLite sin cambiar de motor: útil antes de un backup para llevar los datos a otra PC.</div>
+</div></details>
+<details><summary>8. Correo del portal de abonados</summary><div class="cuerpo">
+<p>El portal de abonados (<b>/portal</b>) envía un PIN por correo. Configure el servidor de correo en <code>backend/.env</code>: <code>EMAIL_HOST</code>, <code>EMAIL_PORT</code>, <code>EMAIL_HOST_USER</code>, <code>EMAIL_HOST_PASSWORD</code>, <code>EMAIL_USE_TLS</code> (o <code>EMAIL_USE_SSL</code>) y <code>CORREO_REMITENTE</code>, y reinicie.</p>
+<div class="tip">💡 Sin <code>EMAIL_HOST</code> no se envía nada: cada correo queda como archivo en <code>backend/datos/correos/</code> (útil para probar).</div>
+<p>Cada institución decide si ofrece el portal (Institución → «Ofrecer el portal de abonados»); también se puede marcar en la ficha de la institución de este panel (sección Configuración).</p>
+</div></details>
+</div>
+{% endblock %}

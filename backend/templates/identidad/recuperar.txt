@@ -1,0 +1,12 @@
+{% autoescape off %}Hola{% if nombre %} {{ nombre }}{% endif %}:
+
+Pidieron elegir una contraseña nueva para el usuario «{{ usuario }}» de {{ institucion }} (código {{ codigo_institucion }}) en Koape Aguateras.
+
+Su código es: {{ codigo }}
+
+Vence en {{ minutos }} minutos y sirve una sola vez. Escríbalo en la pantalla «Olvidé mi contraseña» junto con la contraseña nueva.
+
+Si no fue usted, ignore este correo: su contraseña actual sigue igual.
+
+Koape Aguateras
+{% endautoescape %}

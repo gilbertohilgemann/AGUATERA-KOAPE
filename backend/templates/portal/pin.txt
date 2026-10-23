@@ -1,0 +1,14 @@
+{% autoescape off %}Hola{% if nombre %} {{ nombre }}{% endif %}:
+
+Su PIN para ingresar al portal de abonados es:
+
+    {{ pin }}
+
+Vence en {{ minutos }} minutos y sirve una sola vez. Al ingresar con él va a elegir su contraseña.
+{% if instituciones %}
+Va a poder consultar su cuenta en: {{ instituciones|join:", " }}.
+{% endif %}
+Si usted no lo pidió, ignore este correo: nadie puede entrar sin este PIN.
+
+Koape Aguateras
+{% endautoescape %}

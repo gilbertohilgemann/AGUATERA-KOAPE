@@ -1,0 +1,1508 @@
+# KOAPE AGUATERAS
+## Especificación técnica funcional y arquitectura del sistema
+**Documento base para desarrollo con Claude**
+
+**Producto:** Koape Aguateras  
+**Empresa desarrolladora:** Koape Sistemas EAS  
+**Versión del documento:** 1.0  
+**Estado:** Especificación inicial para implementación  
+**Ámbito:** Paraguay  
+**Objetivo:** Construir una plataforma web multiinstitucional para administrar aguateras, juntas de saneamiento y proveedores comunitarios de agua potable, incluyendo conexiones, medidores, lecturas, facturación, cobranzas, caja, gastos referenciales y geolocalización.
+
+---
+
+# 1. Instrucciones generales para Claude
+
+Actúa como arquitecto de software, analista funcional y desarrollador sénior especializado en Django, Django REST Framework, PostgreSQL, React, sistemas financieros y aplicaciones web con funcionamiento intermitente.
+
+Debes utilizar este documento como especificación principal del proyecto.
+
+Antes de comenzar a programar:
+
+1. Analiza la arquitectura completa y las relaciones entre módulos.
+2. Identifica dependencias, posibles inconsistencias y riesgos.
+3. Propón una estructura de carpetas profesional.
+4. Define los modelos, las restricciones de base de datos, los permisos y las transacciones.
+5. Presenta un plan de implementación por fases.
+6. Implementa cada fase de forma incremental, con migraciones, pruebas y documentación.
+7. No generes una aplicación monolítica desordenada ni concentres todas las reglas de negocio en las vistas.
+8. No inventes requisitos fiscales, endpoints de proveedores externos ni reglas tarifarias que no estén definidos.
+9. Cuando falte una decisión indispensable, documenta la duda y solicita confirmación antes de asumirla.
+10. No elimines funcionalidades ya desarrolladas al incorporar nuevos módulos.
+
+Cada operación crítica debe ser validada por el servidor. La interfaz React no constituye una barrera de seguridad.
+
+El resultado debe ser un sistema real, mantenible, auditable y preparado para crecer, no solamente una demostración visual.
+
+# 2. Objetivos del sistema
+
+Koape Aguateras permitirá a cada institución administrar su padrón de usuarios, conexiones de agua, medidores, lecturas, tarifas, facturas, pagos, recibos, cobradores, cajas, gastos y mapas.
+
+El sistema debe permitir:
+
+- Administrar múltiples instituciones desde una plataforma central.
+- Mantener completamente aislados los datos de cada institución.
+- Registrar usuarios y sus conexiones de agua.
+- Gestionar uno o varios medidores por conexión, según la configuración.
+- Realizar lecturas mediante teléfono celular.
+- Capturar fotografías obligatorias del medidor.
+- Geolocalizar conexiones y visualizar las instalaciones en un mapa.
+- Calcular consumos y liquidar importes conforme a tarifas vigentes.
+- Generar facturas de venta electrónicas mediante un proveedor externo o facturas locales conforme a la modalidad autorizada.
+- Registrar pagos totales y parciales.
+- Emitir recibos de cobro.
+- Administrar caja y gastos referenciales.
+- Controlar recorridos y rendiciones de cobradores.
+- Consultar saldos, deudas, mora, recaudación y consumo.
+- Mantener un historial auditable de las operaciones.
+- Preparar una API para integrar posteriormente un sistema de gestión más completo.
+
+# 3. Tecnologías y arquitectura
+
+## 3.1. Backend
+
+- Python 3.13 o una versión estable compatible con todas las dependencias elegidas.
+- Django.
+- Django REST Framework.
+- PostgreSQL.
+- PostGIS para información geográfica.
+- Autenticación segura mediante sesiones o tokens; elegir el mecanismo apropiado y documentarlo.
+- Tareas en segundo plano para integraciones, generación de documentos y procesos que no deban bloquear las solicitudes web.
+- Almacenamiento privado para fotografías y documentos.
+
+No es obligatorio introducir Redis, Celery u otros componentes en la primera fase si la infraestructura no lo requiere. Si se incorporan, deben justificarse y documentarse.
+
+## 3.2. Frontend
+
+- React.
+- TypeScript.
+- Diseño adaptable para escritorio, tabletas y teléfonos.
+- Aplicación web progresiva (PWA) para los cobradores.
+- Leaflet para mapas.
+- Formularios con validación.
+- Componentes reutilizables.
+- Gestión centralizada de autenticación, permisos y errores de API.
+
+## 3.3. Infraestructura
+
+La aplicación debe poder desplegarse en Linux mediante un esquema reproducible, con configuración por variables de entorno.
+
+Separar:
+
+- Aplicación backend.
+- Aplicación frontend.
+- Base de datos.
+- Archivos multimedia.
+- Procesos asíncronos, si se utilizan.
+- Logs técnicos y de auditoría.
+
+Preparar entornos independientes para desarrollo, pruebas y producción.
+
+No guardar contraseñas, claves de API ni tokens en el repositorio.
+
+## 3.4. Principios arquitectónicos
+
+- Separación por módulos de dominio.
+- Reglas de negocio en servicios de aplicación o dominio, no duplicadas entre vistas.
+- Restricciones críticas en la base de datos.
+- Operaciones financieras dentro de transacciones.
+- API versionada.
+- Aislamiento multiempresa en todas las consultas.
+- Auditoría de operaciones sensibles.
+- Idempotencia para operaciones que puedan repetirse.
+- Integraciones externas desacopladas.
+- Capacidad de ampliar el sistema sin reescribir los módulos existentes.
+
+# 4. Arquitectura multiinstitucional
+
+El sistema debe ser multiempresa desde su primera versión.
+
+Cada institución representa una aguatera, junta de saneamiento u organización prestadora del servicio.
+
+## 4.1. Entidad Institution
+
+Datos mínimos:
+
+- ID.
+- Código institucional único.
+- Nombre o razón social.
+- RUC, cuando corresponda.
+- Dirección.
+- Teléfono.
+- Correo electrónico.
+- Logo.
+- Datos de contacto.
+- Estado: activa, suspendida o archivada.
+- Configuración regional y zona horaria.
+- Configuración de facturación.
+- Configuración de tarifas.
+- Fecha de creación.
+- Fecha de actualización.
+
+El código institucional será utilizado durante el inicio de sesión.
+
+## 4.2. Aislamiento de datos
+
+Toda entidad perteneciente a una institución debe tener una relación inequívoca con ella.
+
+Ejemplos:
+
+- Clientes.
+- Conexiones.
+- Medidores.
+- Lecturas.
+- Facturas.
+- Pagos.
+- Recibos.
+- Cajas.
+- Gastos.
+- Zonas.
+- Barrios.
+- Recorridos.
+- Configuraciones particulares.
+
+El backend debe verificar la institución del usuario autenticado en cada operación.
+
+No confiar en un `institution_id` enviado por el frontend para autorizar el acceso.
+
+Las relaciones entre registros de una institución y otra deben rechazarse incluso cuando el usuario conoce sus identificadores.
+
+Las restricciones de base de datos y los servicios deben prevenir cruces entre instituciones.
+
+# 5. Usuarios, autenticación y permisos
+
+## 5.1. Roles iniciales
+
+### A. Superusuario de plataforma
+
+Puede:
+
+- Crear instituciones.
+- Editar configuraciones generales.
+- Activar o suspender instituciones.
+- Administrar usuarios con permisos de plataforma.
+- Consultar indicadores globales autorizados.
+- Gestionar configuraciones de integraciones.
+- Consultar auditorías de plataforma.
+
+No debe utilizarse este rol como una cuenta operativa compartida. Toda intervención administrativa debe quedar registrada.
+
+El acceso a información particular de una institución debe limitarse a lo necesario y quedar auditado cuando corresponda.
+
+### B. Administrador institucional
+
+Puede administrar exclusivamente su institución.
+
+Permisos:
+
+- Gestionar clientes.
+- Gestionar conexiones y medidores.
+- Administrar zonas y barrios.
+- Configurar tarifas y vigencias.
+- Crear y administrar recorridos.
+- Consultar lecturas.
+- Validar o corregir lecturas mediante procedimientos auditados.
+- Generar liquidaciones y facturas.
+- Registrar pagos.
+- Emitir recibos.
+- Administrar cajas y gastos referenciales.
+- Consultar informes.
+- Administrar usuarios y cobradores institucionales.
+- Configurar la modalidad de facturación autorizada.
+
+No puede borrar físicamente registros operativos o financieros.
+
+### C. Colector o cobrador
+
+Puede:
+
+- Iniciar su recorrido asignado.
+- Consultar el mapa y las conexiones habilitadas para ese recorrido.
+- Identificar un medidor mediante número o código.
+- Registrar la lectura.
+- Tomar fotografías.
+- Registrar comentarios.
+- Capturar ubicación GPS cuando esté disponible.
+- Consultar las deudas que el flujo autorizado revele después de confirmar la lectura.
+- Registrar pagos cuando se le otorgue expresamente ese permiso.
+- Emitir o entregar comprobantes autorizados.
+- Realizar su rendición de caja cuando corresponda.
+
+No puede:
+
+- Navegar libremente por todo el padrón.
+- Consultar anticipadamente las deudas de cualquier usuario.
+- Modificar tarifas.
+- Crear o alterar facturas arbitrariamente.
+- Acceder a otras instituciones.
+- Eliminar registros.
+- Cambiar lecturas históricas sin autorización.
+- Modificar pagos confirmados.
+
+La consulta de deuda debe estar condicionada por el flujo de trabajo autorizado, no únicamente por ocultar información en la interfaz.
+
+## 5.2. Inicio de sesión
+
+Campos:
+
+- Código institucional.
+- Nombre de usuario.
+- Contraseña.
+
+Validaciones:
+
+- Usuario activo.
+- Institución activa.
+- Contraseña válida.
+- Permisos vigentes.
+- Control de intentos fallidos.
+- Cierre de sesión y expiración de credenciales.
+- Recuperación segura de contraseña.
+
+Registrar eventos de inicio de sesión y accesos relevantes.
+
+## 5.3. Matriz de permisos
+
+Implementar permisos mediante políticas explícitas del backend. No utilizar únicamente condiciones visuales en React.
+
+Cada endpoint debe comprobar:
+
+1. Usuario autenticado.
+2. Institución autorizada.
+3. Permiso requerido.
+4. Estado del registro.
+5. Restricciones del flujo operativo.
+6. Asignación al recorrido cuando corresponda.
+
+# 6. Política de conservación de registros y auditoría
+
+El sistema no debe permitir la desaparición silenciosa de información.
+
+## 6.1. Registros de configuración
+
+Ejemplos: zonas, barrios, categorías, tarifas antiguas y tipos de gastos.
+
+Cuando dejan de utilizarse, deben archivarse o desactivarse, sin borrar su historial.
+
+Los registros archivados no deben aparecer como opciones para nuevas operaciones, pero sí deben continuar visibles en consultas históricas.
+
+Su restauración debe requerir permisos y quedar auditada.
+
+## 6.2. Registros operativos
+
+Ejemplos:
+
+- Lecturas.
+- Fotografías.
+- Facturas.
+- Pagos.
+- Recibos.
+- Movimientos de caja.
+- Rendiciones.
+- Gastos confirmados.
+
+No deben eliminarse físicamente ni ocultarse para borrar su rastro.
+
+Si existe un error, debe registrarse una invalidación o reversión con:
+
+- Registro afectado.
+- Motivo.
+- Usuario responsable.
+- Fecha y hora.
+- Operación correctiva.
+- Referencia al registro original.
+- Evidencia disponible.
+
+Las facturas y los pagos no deben modificarse silenciosamente después de su confirmación. Las correcciones financieras deben realizarse mediante los procedimientos de ajuste o reversión correspondientes.
+
+## 6.3. AuditLog
+
+Campos mínimos:
+
+- ID.
+- Institución, cuando corresponda.
+- Usuario.
+- Acción.
+- Tipo de entidad.
+- ID de la entidad.
+- Fecha y hora.
+- Motivo, cuando corresponda.
+- Datos anteriores y posteriores pertinentes.
+- Dirección IP, si está disponible.
+- Identificador de solicitud.
+
+No guardar contraseñas, tokens ni secretos en los registros.
+
+La auditoría debe estar protegida contra modificaciones realizadas por usuarios ordinarios.
+
+# 7. Gestión del padrón de usuarios
+
+Crear un módulo de clientes o titulares del servicio.
+
+## 7.1. Entidad Customer
+
+Campos mínimos:
+
+- ID.
+- Institución.
+- Código de cliente.
+- Nombre completo o razón social.
+- Tipo de persona, si corresponde.
+- Documento de identidad o RUC, cuando corresponda.
+- Teléfono.
+- Correo electrónico.
+- Dirección de referencia.
+- Observaciones.
+- Estado.
+- Fecha de alta.
+- Fecha de actualización.
+
+El código de cliente debe ser único dentro de la institución.
+
+No utilizar el documento de identidad como única clave del cliente, porque puede haber situaciones en las que no esté disponible o en las que un titular tenga más de una conexión.
+
+## 7.2. Conexiones de agua
+
+Entidad `WaterConnection`.
+
+Campos:
+
+- ID.
+- Institución.
+- Cliente titular.
+- Código de conexión.
+- Número de medidor actual.
+- Dirección.
+- Zona.
+- Barrio.
+- Coordenadas geográficas.
+- Método de geolocalización.
+- Fotografía de la vivienda, si existe.
+- Estado de conexión.
+- Fecha de instalación.
+- Observaciones.
+- Fecha de creación y actualización.
+
+Estados iniciales sugeridos:
+
+- Activa.
+- Suspendida.
+- Desconectada.
+- En instalación.
+- Pendiente de ubicación.
+- Archivada.
+
+Definir las transiciones válidas entre estados.
+
+La suspensión del servicio no debe borrar deudas ni historial de consumo.
+
+Una conexión puede tener historial de titulares, instalaciones y medidores.
+
+## 7.3. Medidores
+
+Entidades `Meter` y `MeterInstallation`.
+
+Separar el medidor físico de su instalación en una conexión.
+
+Datos del medidor:
+
+- Número de serie o identificación.
+- Institución.
+- Marca, si está disponible.
+- Modelo, si está disponible.
+- Estado.
+- Observaciones.
+
+Datos de instalación:
+
+- Conexión.
+- Medidor.
+- Fecha de instalación.
+- Fecha de retiro, cuando corresponda.
+- Lectura inicial.
+- Lectura final de retiro, cuando corresponda.
+- Responsable.
+- Motivo de sustitución.
+
+Debe poder reemplazarse un medidor sin perder las lecturas históricas del anterior.
+
+Validar que no existan instalaciones incompatibles o simultáneas del mismo medidor.
+
+# 8. Zonas, barrios y geolocalización
+
+## 8.1. Organización territorial
+
+Entidades:
+
+- `Zone`.
+- `Neighborhood`.
+
+Cada zona y barrio pertenece a una institución.
+
+Una zona puede contener varios barrios. La relación exacta debe quedar definida en el modelo y validarse en el backend.
+
+Los nombres no deben ser la única clave de identificación.
+
+## 8.2. Mapas
+
+Utilizar PostgreSQL/PostGIS y Leaflet.
+
+Funciones:
+
+- Mostrar las conexiones en un mapa.
+- Visualizar la ubicación de cada conexión.
+- Diferenciar zonas mediante colores.
+- Dibujar y editar polígonos de zonas.
+- Consultar la ficha de una conexión.
+- Mostrar fotografía de la vivienda cuando exista.
+- Mostrar el estado de conexión.
+- Filtrar conexiones por criterios combinables.
+- Permitir registrar coordenadas manualmente o mediante GPS.
+- Identificar conexiones sin ubicación.
+
+Filtros mínimos:
+
+- Todas las conexiones.
+- Con deuda.
+- Al día.
+- Morosas.
+- Con lectura realizada.
+- Sin lectura del período.
+- Suspendidas.
+- Sin ubicación.
+- Por zona.
+- Por barrio.
+- Por cobrador.
+- Por recorrido.
+- Por período.
+
+Definir claramente los conceptos de “con deuda” y “morosa”: tener saldo pendiente no necesariamente significa que una factura haya vencido.
+
+El mapa debe respetar los permisos y asignaciones del usuario autenticado.
+
+## 8.3. Recorridos
+
+Crear entidades `Route` y `RouteAssignment`.
+
+Permitir:
+
+- Definir recorridos por zona, barrio o selección de conexiones.
+- Asignar uno o varios cobradores autorizados.
+- Establecer el período del recorrido.
+- Mostrar conexiones pendientes y completadas.
+- Registrar fecha y hora de inicio y finalización.
+- Consultar el progreso.
+- Evitar que un cobrador acceda a conexiones ajenas a su asignación.
+
+No asumir que el orden de visita se corresponde con el orden alfabético o el ID de la conexión.
+
+# 9. Módulo de lecturas
+
+Este módulo es crítico y debe implementarse con especial cuidado.
+
+## 9.1. Entidad Reading
+
+Campos mínimos:
+
+- ID.
+- Institución.
+- Conexión.
+- Instalación del medidor.
+- Medidor.
+- Período de lectura.
+- Lectura anterior.
+- Fecha de lectura anterior.
+- Lectura actual.
+- Consumo calculado.
+- Fecha y hora de captura.
+- Cobrador.
+- Recorrido asignado.
+- Coordenadas GPS, si están disponibles.
+- Estado.
+- Comentario.
+- Fecha de sincronización.
+- Identificador de operación del dispositivo para evitar duplicados.
+
+Conservar una referencia inequívoca al medidor instalado durante la lectura, aunque después se sustituya el medidor.
+
+Los datos históricos deben representar los valores utilizados al momento de la operación, no recalcularse silenciosamente según la configuración actual.
+
+## 9.2. Flujo obligatorio para el cobrador
+
+**Paso 1. Identificar el medidor**
+
+El cobrador ingresa o escanea el número de medidor.
+
+El servidor verifica:
+
+- Que el medidor exista.
+- Que pertenezca a la institución activa.
+- Que esté asociado a una instalación válida.
+- Que la conexión esté habilitada para el recorrido.
+- Que el usuario tenga autorización.
+- Que no exista una operación duplicada incompatible.
+
+**Paso 2. Capturar fotografía obligatoria**
+
+Antes de revelar los datos del titular, el sistema debe abrir la cámara y solicitar una fotografía del medidor.
+
+No permitir continuar sin una fotografía válida.
+
+La aplicación debe verificar que la imagen se haya capturado o seleccionado mediante el mecanismo permitido y que se haya asociado a la operación.
+
+La captura desde cámara debe priorizarse. Si se admite una fotografía previamente tomada, debe ser una decisión explícita de configuración y quedar identificada como tal.
+
+**Paso 3. Mostrar datos de la conexión**
+
+Una vez cumplido el paso anterior, revelar:
+
+- Nombre del titular.
+- Dirección.
+- Número de conexión.
+- Número de medidor.
+- Fotografía de la vivienda, si existe.
+- Lectura anterior.
+- Fecha de la lectura anterior.
+
+No revelar saldos o deudas antes de completar la etapa de lectura definida para ese recorrido.
+
+**Paso 4. Introducir lectura actual**
+
+El cobrador registra el valor observado en el medidor.
+
+Validar:
+
+- Formato numérico.
+- Unidad de lectura.
+- Valor no negativo.
+- Coherencia con la lectura anterior.
+- Capacidad y reinicio del medidor, si corresponde.
+- Ausencia de duplicación para la misma instalación y período.
+
+Si la lectura es inferior a la anterior, no rechazarla automáticamente en todos los casos: puede existir un cambio de medidor, un reinicio o una situación excepcional. Debe abrirse un procedimiento de excepción con motivo y autorización.
+
+No calcular consumos negativos sin una regla de negocio aprobada.
+
+**Paso 5. Confirmar lectura**
+
+El backend vuelve a validar los datos y calcula el consumo.
+
+Fórmula básica:
+
+`consumo = lectura_actual - lectura_anterior`
+
+Esta fórmula aplica cuando ambas lecturas corresponden a la misma instalación y no existe una excepción de rollover, reinicio o sustitución.
+
+El cálculo definitivo debe realizarse en el servidor, dentro de una operación controlada.
+
+**Paso 6. Mostrar deudas**
+
+Una vez confirmada la lectura, mostrar las facturas pendientes autorizadas para esa conexión:
+
+- Número de factura.
+- Fecha de emisión.
+- Fecha de vencimiento.
+- Importe original.
+- Total pagado.
+- Saldo pendiente.
+- Días de mora, cuando exista vencimiento y corresponda.
+
+No permitir que el frontend calcule o modifique el saldo como fuente oficial.
+
+**Paso 7. Información adicional**
+
+Permitir:
+
+- Fotografías adicionales opcionales.
+- Comentarios.
+- GPS.
+- Fecha y hora.
+- Identificación del cobrador.
+
+**Paso 8. Generar comprobante**
+
+Generar un comprobante de lectura en PDF con:
+
+- Institución.
+- Titular.
+- Dirección.
+- Conexión.
+- Medidor.
+- Lectura anterior y fecha.
+- Lectura actual.
+- Consumo.
+- Fecha y hora.
+- Cobrador.
+- Fotografía principal, si el diseño lo permite.
+- Estado de la lectura.
+- Código identificador del comprobante.
+
+El comprobante debe estar disponible para impresión y conservación digital.
+
+Una lectura no debe confundirse con una factura ni con un recibo de cobro.
+
+## 9.3. Tarifas y liquidación
+
+Separar la captura de lectura del cálculo tarifario.
+
+Entidades:
+
+- `Tariff`.
+- `TariffRule`.
+- `ConsumptionSettlement`.
+
+La liquidación debe guardar una instantánea de los parámetros y resultados utilizados:
+
+- Lectura vinculada.
+- Tarifa aplicada.
+- Versión o vigencia tarifaria.
+- Consumo.
+- Importe base.
+- Cargos adicionales, si están configurados.
+- Descuentos, si están autorizados.
+- Total liquidado.
+- Fecha de cálculo.
+
+No modificar automáticamente liquidaciones históricas al cambiar una tarifa.
+
+La fórmula exacta de las tarifas debe ser configurable. No asumir que todas las instituciones cobran únicamente por metro cúbico ni que todas tienen el mismo cargo fijo.
+
+Antes de programar las reglas tarifarias definitivas, solicitar confirmación sobre los tipos de tarifas que se utilizarán en la primera versión.
+
+# 10. Funcionamiento sin conexión y sincronización
+
+La PWA debe soportar conectividad intermitente.
+
+## 10.1. Requisitos
+
+- Conservar temporalmente las lecturas pendientes.
+- Conservar las fotografías asociadas.
+- Registrar el estado de sincronización.
+- Reintentar operaciones cuando vuelva la conectividad.
+- Evitar duplicados mediante identificadores únicos de operación.
+- Mostrar errores de sincronización.
+- Permitir al usuario reconocer qué registros están pendientes.
+
+Estados sugeridos:
+
+- Borrador local.
+- Pendiente de sincronización.
+- En sincronización.
+- Sincronizado.
+- Error de sincronización.
+- Requiere revisión.
+
+## 10.2. Reglas de sincronización
+
+No marcar una lectura como sincronizada hasta que el servidor confirme la recepción de la lectura y todos los archivos obligatorios asociados.
+
+La sincronización debe poder reanudarse sin crear duplicados.
+
+El servidor debe comprobar conflictos cuando una lectura fue creada sin conexión y la información cambió entretanto.
+
+No sobrescribir automáticamente una lectura oficial con una copia local antigua.
+
+Si hay conflictos, registrar la situación y solicitar revisión autorizada.
+
+Las fotografías deben almacenarse de forma segura en el dispositivo y eliminarse de la cola local únicamente cuando la política de sincronización permita hacerlo.
+
+Definir medidas de seguridad para evitar que datos personales permanezcan indefinidamente en un dispositivo compartido.
+
+# 11. Liquidaciones, facturas y facturación fiscal
+
+Separar estrictamente las siguientes entidades:
+
+1. Lectura.
+2. Liquidación de consumo.
+3. Factura de venta.
+4. Línea de factura.
+5. Solicitud de facturación externa.
+6. Pago.
+7. Aplicación de pago.
+8. Recibo de cobro.
+9. Movimiento de caja.
+
+Una lectura no es una factura. Una factura no es un pago. Un recibo no sustituye a la factura fiscal.
+
+## 11.1. Facturación por institución
+
+Cada institución tendrá una configuración de modalidad:
+
+- `ELECTRONIC`.
+- `SELF_PRINTED`.
+
+La modalidad debe validarse contra las habilitaciones fiscales y la configuración real de la institución.
+
+No asumir que una factura generada localmente puede utilizarse como documento fiscal válido sin cumplir los requisitos aplicables.
+
+## 11.2. Facturación electrónica
+
+Implementar una capa desacoplada de integración, por ejemplo:
+
+- `ElectronicInvoiceProvider`.
+- `ElectronicInvoiceAdapter`.
+- `ExternalInvoiceRequest`.
+- `IntegrationLog`.
+
+La integración se realizará con la API de la plataforma externa elegida por la institución.
+
+No inventar URLs, endpoints, estructuras XML/JSON, credenciales ni respuestas del proveedor. Solicitar su documentación técnica antes de implementar el adaptador real.
+
+El flujo debe:
+
+1. Validar los datos de facturación.
+2. Crear una solicitud interna identificada de forma única.
+3. Registrar la operación antes de llamar al proveedor.
+4. Enviar la solicitud mediante el adaptador.
+5. Registrar la respuesta.
+6. Conservar los identificadores fiscales devueltos.
+7. Consultar el estado cuando sea necesario.
+8. Manejar errores y reintentos.
+9. Evitar la emisión duplicada.
+10. Registrar todas las transiciones de estado.
+
+Estados orientativos:
+
+- Pendiente.
+- Enviada.
+- En procesamiento.
+- Emitida y confirmada.
+- Rechazada.
+- Error recuperable.
+- Estado desconocido, pendiente de consulta.
+- Anulada, cuando exista un procedimiento válido.
+
+Una respuesta HTTP exitosa no significa necesariamente que la factura fue emitida fiscalmente. La confirmación debe basarse en las respuestas y reglas documentadas del proveedor.
+
+Si se produce un timeout, no volver a emitir a ciegas. Consultar el estado de la solicitud o utilizar el mecanismo de idempotencia que ofrezca la API.
+
+Guardar, cuando corresponda, CDC, número de documento, datos de autorización, respuesta fiscal y representación PDF/XML devuelta por el proveedor.
+
+Proteger las credenciales y los datos fiscales.
+
+## 11.3. Facturación autoimpresa o local
+
+En la modalidad `SELF_PRINTED`, el sistema permitirá cargar los datos y generar localmente el documento PDF correspondiente.
+
+Debe contemplar:
+
+- Datos de la institución emisora.
+- Datos del cliente.
+- Número de factura.
+- Fecha de emisión.
+- Líneas facturadas.
+- Cantidades y precios, cuando correspondan.
+- Descuentos, impuestos y totales conforme a las reglas configuradas.
+- Condición de venta.
+- Referencias a las liquidaciones correspondientes.
+- Datos de autorización fiscal aplicables.
+- Estado del documento.
+- Historial de correcciones.
+
+La numeración debe estar controlada por institución, establecimiento, punto de expedición y demás componentes que resulten aplicables.
+
+Antes de implementar la emisión fiscal definitiva, verificar los requisitos vigentes de la DNIT y las habilitaciones de cada institución.
+
+No permitir que cambiar una configuración permita emitir documentos fiscales fuera de la autorización correspondiente.
+
+## 11.4. Facturas que agrupan varias lecturas
+
+Una factura puede incluir varias liquidaciones o lecturas elegibles, siempre que las reglas de negocio lo permitan.
+
+Crear una entidad de asignación entre factura y liquidación, por ejemplo `InvoiceReadingAllocation`.
+
+Cada asignación debe indicar:
+
+- Factura.
+- Liquidación.
+- Importe aplicado.
+- Fecha de asignación.
+- Estado.
+
+Prevenir la facturación duplicada de una misma liquidación.
+
+Si se permite facturación parcial, definir cómo se controla el importe restante. Si no se necesita en la primera versión, impedirla explícitamente.
+
+Conservar la relación histórica entre la factura y cada lectura facturada.
+
+## 11.5. Ventas a crédito
+
+La factura debe registrar la condición de venta.
+
+Para ventas a crédito, conservar:
+
+- Importe original.
+- Fecha de emisión.
+- Fecha de vencimiento o plan de vencimientos, según la política aprobada.
+- Condición de venta.
+- Pagos aplicados.
+- Saldo pendiente.
+- Estado derivado.
+
+No marcar una factura como pagada por el mero hecho de registrar un recibo.
+
+El saldo debe derivarse de los importes válidos, las aplicaciones de pago y los ajustes autorizados.
+
+## 11.6. Recibos
+
+Emitir un recibo para documentar el cobro o el tratamiento de la venta a crédito según la operación correspondiente.
+
+El recibo debe contener:
+
+- Institución.
+- Número de recibo.
+- Fecha y hora.
+- Cliente.
+- Facturas a las que se aplica.
+- Importe recibido.
+- Forma de pago.
+- Identificación del cobrador o usuario.
+- Saldo restante, cuando corresponda.
+- Estado del recibo.
+
+El recibo no reemplaza la factura fiscal.
+
+Si se anula un recibo confirmado, mantener el documento original, registrar el motivo y generar los movimientos compensatorios necesarios.
+
+# 12. Pagos parciales y aplicación de pagos
+
+Crear las entidades:
+
+- `Payment`.
+- `PaymentAllocation`.
+
+## 12.1. Payment
+
+Representa el dinero recibido.
+
+Campos:
+
+- Institución.
+- Identificador único.
+- Cliente.
+- Fecha y hora.
+- Importe.
+- Forma de pago.
+- Referencia externa, si existe.
+- Cobrador o usuario.
+- Caja o sesión de caja.
+- Estado.
+- Observaciones.
+- Clave de idempotencia.
+
+Formas de pago iniciales configurables:
+
+- Efectivo.
+- Transferencia.
+- POS.
+- Otros medios autorizados.
+
+## 12.2. PaymentAllocation
+
+Representa la aplicación del pago a una o varias facturas.
+
+Campos:
+
+- Pago.
+- Factura.
+- Importe aplicado.
+- Fecha.
+- Usuario.
+- Estado.
+
+Reglas:
+
+- Un pago puede aplicarse a varias facturas.
+- Una factura puede recibir varios pagos.
+- Se admiten pagos parciales.
+- La suma de aplicaciones confirmadas no puede superar el importe válido disponible del pago.
+- La suma de pagos aplicados a una factura no puede exceder su saldo cobrable, salvo que exista una regla explícita y autorizada para anticipos o saldos a favor.
+- No aplicar pagos a facturas de otra institución.
+- No duplicar operaciones por reintentos de red.
+- Las modificaciones posteriores deben quedar auditadas.
+
+El orden de aplicación puede ser manual o automático según una política configurable.
+
+Una política posible es aplicar primero a la factura vencida más antigua. Debe ser configurable y mostrar al usuario cómo se distribuyó el importe.
+
+No imponer esta política sin confirmación institucional.
+
+# 13. Caja diaria
+
+La caja debe controlar la recaudación y los movimientos de efectivo u otros medios, sin pretender reemplazar un sistema contable completo.
+
+Entidades:
+
+- `CashRegister`.
+- `CashSession`.
+- `CashMovement`.
+- `CollectorSettlement`.
+
+## 13.1. Apertura y cierre
+
+La sesión de caja debe registrar:
+
+- Institución.
+- Caja.
+- Responsable.
+- Fecha y hora de apertura.
+- Saldo inicial.
+- Movimientos asociados.
+- Saldo esperado por medio de pago.
+- Saldo declarado.
+- Fecha y hora de cierre.
+- Diferencias.
+- Observaciones.
+- Estado.
+
+Estados orientativos:
+
+- Abierta.
+- Cerrada.
+- En revisión.
+
+No permitir que una sesión cerrada se altere silenciosamente.
+
+## 13.2. Ingresos
+
+Los ingresos por cobranza deben vincularse con pagos confirmados.
+
+No registrar manualmente un segundo ingreso independiente que duplique el mismo cobro.
+
+## 13.3. Egresos
+
+Los egresos deben vincularse con gastos referenciales confirmados.
+
+Cada movimiento debe identificar su origen.
+
+## 13.4. Medios de pago
+
+No sumar automáticamente efectivo, transferencias y operaciones POS como si fueran dinero físico en caja.
+
+El sistema debe mostrar saldos separados por medio de pago y aplicar reglas de conciliación apropiadas.
+
+## 13.5. Rendición del cobrador
+
+Permitir:
+
+- Consultar cobros del cobrador durante el recorrido o turno.
+- Agrupar por forma de pago.
+- Mostrar total esperado.
+- Registrar importe declarado.
+- Registrar diferencias.
+- Adjuntar observaciones.
+- Confirmar la rendición.
+- Requerir revisión administrativa cuando corresponda.
+
+# 14. Gastos referenciales
+
+El módulo de gastos es exclusivamente referencial en esta primera versión.
+
+No constituye un módulo completo de compras, proveedores, cuentas por pagar ni contabilidad.
+
+Entidad `Expense`.
+
+Campos:
+
+- Institución.
+- Fecha.
+- Motivo.
+- Importe.
+- Categoría.
+- Forma de pago.
+- Número de comprobante, si existe.
+- Beneficiario.
+- Responsable.
+- Caja o sesión asociada.
+- Fotografía del comprobante, si existe.
+- Estado.
+- Observaciones.
+- Fecha de creación.
+- Usuario que registra.
+- Usuario que confirma.
+
+## 14.1. Comprobantes
+
+Cuando exista un comprobante, permitir adjuntar una imagen o documento.
+
+Cuando no exista comprobante, permitir generar una boleta interna en PDF para imprimir y firmar.
+
+Crear una entidad `ExpenseVoucher` que registre:
+
+- Gasto relacionado.
+- Número interno.
+- Fecha.
+- Importe.
+- Motivo.
+- Beneficiario.
+- Responsable.
+- Firma manuscrita en el documento impreso, cuando corresponda.
+- Fotografía o archivo de la boleta firmada.
+
+La boleta interna es evidencia administrativa. No debe presentarse como sustituto de un comprobante fiscal.
+
+## 14.2. Confirmación y caja
+
+Un gasto solo debe generar un egreso de caja cuando se encuentre confirmado conforme a los permisos y reglas configurados.
+
+No duplicar el egreso si la operación se reintenta.
+
+Los gastos deben aparecer en los informes de caja y rendición.
+
+No generar automáticamente facturas de compra ni asientos contables.
+
+# 15. Informes y panel administrativo
+
+El panel institucional debe ofrecer indicadores calculados a partir de datos consistentes.
+
+Informes mínimos:
+
+- Total de conexiones.
+- Conexiones activas y suspendidas.
+- Conexiones pendientes de ubicación.
+- Lecturas por período.
+- Lecturas pendientes.
+- Consumo por período.
+- Consumo por zona y barrio.
+- Liquidaciones generadas.
+- Facturas emitidas.
+- Facturas pendientes de cobro.
+- Saldos por cliente.
+- Antigüedad de deuda.
+- Recaudación por fecha.
+- Recaudación por cobrador.
+- Recaudación por forma de pago.
+- Gastos referenciales.
+- Aperturas y cierres de caja.
+- Diferencias de caja.
+- Rendiciones pendientes.
+- Estado de integraciones electrónicas.
+
+Los informes deben permitir filtros por período, zona, barrio, cobrador y estado cuando corresponda.
+
+Las métricas deben tener definiciones explícitas. Por ejemplo, separar facturación emitida de dinero efectivamente cobrado.
+
+Permitir exportación a CSV o Excel cuando corresponda y respetar los permisos de acceso.
+
+# 16. API REST y futura integración
+
+Diseñar la API desde el inicio para facilitar una futura integración con un sistema de gestión completo.
+
+Prefijo recomendado:
+
+`/api/v1/`
+
+Áreas funcionales:
+
+- `/auth/`
+- `/institutions/`
+- `/users/`
+- `/customers/`
+- `/connections/`
+- `/meters/`
+- `/zones/`
+- `/neighborhoods/`
+- `/routes/`
+- `/readings/`
+- `/settlements/`
+- `/tariffs/`
+- `/invoices/`
+- `/electronic-invoices/`
+- `/payments/`
+- `/payment-allocations/`
+- `/receipts/`
+- `/cash-registers/`
+- `/cash-sessions/`
+- `/cash-movements/`
+- `/expenses/`
+- `/reports/`
+- `/audit/`
+
+Estos son grupos funcionales orientativos, no una obligación de crear un endpoint por cada entidad sin analizar su utilidad.
+
+La futura integración debe contar con:
+
+- Versionado.
+- Autenticación de aplicaciones.
+- Credenciales revocables.
+- Permisos por institución y recurso.
+- Idempotencia para operaciones sensibles.
+- Validación de entradas.
+- Registro de solicitudes.
+- Límites de uso cuando corresponda.
+- Respuestas y errores documentados.
+- Control de duplicados.
+- Reglas transaccionales compartidas con la aplicación principal.
+
+La API externa no debe duplicar la lógica de negocio. Debe reutilizar los servicios de dominio del sistema.
+
+No es necesario implementar desde la primera versión todos los endpoints para un ERP completo. Se debe dejar preparada la arquitectura y documentar las operaciones disponibles.
+
+# 17. Modelo de datos propuesto
+
+Crear modelos Django independientes y organizados por aplicación.
+
+Modelos principales:
+
+**Instituciones y seguridad**
+- `Institution`
+- `User`
+- `Role` o sistema de permisos equivalente
+- `AuditLog`
+
+**Padrón y conexiones**
+- `Customer`
+- `WaterConnection`
+- `Meter`
+- `MeterInstallation`
+- `Zone`
+- `Neighborhood`
+
+**Recorridos**
+- `Route`
+- `RouteAssignment`
+- `RouteConnection` o entidad equivalente para conexiones incluidas en el recorrido
+
+**Lecturas y tarifas**
+- `Reading`
+- `ReadingPhoto`
+- `Tariff`
+- `TariffRule`
+- `ConsumptionSettlement`
+
+**Facturación**
+- `BillingDocument` o `Invoice`
+- `InvoiceLine`
+- `InvoiceReadingAllocation`
+- `ExternalInvoiceRequest`
+- `IntegrationLog`
+
+**Pagos**
+- `Payment`
+- `PaymentAllocation`
+- `Receipt`
+
+**Caja y gastos**
+- `CashRegister`
+- `CashSession`
+- `CashMovement`
+- `CollectorSettlement`
+- `Expense`
+- `ExpenseAttachment`
+- `ExpenseVoucher`
+
+Los nombres definitivos pueden ajustarse durante el diseño técnico, siempre que se conserve la separación funcional.
+
+## 17.1. Reglas de modelado
+
+- Utilizar claves primarias estables.
+- Definir índices para búsquedas frecuentes.
+- Definir restricciones de unicidad por institución.
+- Validar las relaciones entre instituciones.
+- Utilizar claves foráneas con políticas de borrado apropiadas.
+- No utilizar `CASCADE` indiscriminadamente en registros operativos.
+- Incorporar `created_at` y `updated_at` donde corresponda.
+- Registrar el usuario responsable de operaciones críticas.
+- Usar `DecimalField` para importes monetarios.
+- Definir precisión y escala de las lecturas conforme a la unidad del medidor.
+- Usar fechas con zona horaria.
+- Guardar los importes históricos utilizados en documentos confirmados.
+- Evitar depender exclusivamente de propiedades calculadas que cambien con el tiempo.
+- Utilizar restricciones únicas y operaciones transaccionales para prevenir duplicados.
+
+# 18. Transacciones y consistencia financiera
+
+Las operaciones financieras deben diseñarse para resistir errores de red, concurrencia y reintentos.
+
+Ejemplos:
+
+- Confirmación de un pago.
+- Aplicación de un pago a facturas.
+- Confirmación de una factura local.
+- Registro de un movimiento de caja.
+- Confirmación de un gasto.
+- Reversión de una operación.
+
+Cuando corresponda, utilizar `transaction.atomic()` y bloqueos de filas para evitar que dos procesos cobren o apliquen simultáneamente importes incompatibles.
+
+No depender de una secuencia de solicitudes del frontend para garantizar la consistencia.
+
+Cada operación debe comprobar nuevamente los saldos y estados dentro de la transacción.
+
+Una reversión debe conservar la referencia al movimiento original y generar movimientos compensatorios.
+
+No modificar un pago histórico para hacer desaparecer un cobro o una diferencia.
+
+# 19. Seguridad y privacidad
+
+Implementar como mínimo:
+
+- HTTPS en producción.
+- Hash seguro de contraseñas mediante Django.
+- Protección contra accesos no autorizados.
+- Validación de archivos.
+- Límites de tamaño y tipos permitidos.
+- Nombres de archivo seguros.
+- Almacenamiento privado de fotografías.
+- Autorización para visualizar documentos.
+- Protección de credenciales externas.
+- Rotación de secretos cuando corresponda.
+- Copias de seguridad.
+- Logs técnicos sin secretos.
+- Control de intentos de inicio de sesión.
+- Validación de datos en el servidor.
+- Restricciones para archivos adjuntos.
+- Auditoría de acciones críticas.
+
+No exponer archivos privados mediante rutas públicas predecibles.
+
+Las fotografías de medidores, viviendas y documentos deben ser accesibles solamente a los usuarios autorizados.
+
+# 20. Interfaz de usuario
+
+## 20.1. Panel administrativo
+
+Menú sugerido:
+
+1. Inicio.
+2. Institución.
+3. Clientes.
+4. Conexiones.
+5. Medidores.
+6. Zonas y barrios.
+7. Mapa.
+8. Recorridos.
+9. Lecturas.
+10. Tarifas.
+11. Liquidaciones.
+12. Facturación.
+13. Cobranzas.
+14. Recibos.
+15. Caja.
+16. Gastos.
+17. Informes.
+18. Usuarios y permisos.
+19. Integraciones.
+20. Auditoría.
+
+Los elementos visibles dependerán del rol.
+
+## 20.2. Aplicación del cobrador
+
+Priorizar una interfaz móvil sencilla:
+
+- Iniciar recorrido.
+- Ver conexiones asignadas en mapa o lista.
+- Buscar o escanear medidor.
+- Capturar fotografía.
+- Registrar lectura.
+- Confirmar.
+- Consultar deuda autorizada.
+- Registrar pago si está permitido.
+- Emitir comprobante.
+- Consultar pendientes de sincronización.
+- Finalizar recorrido.
+- Presentar rendición, si corresponde.
+
+Mostrar claramente el estado de conexión a internet y de sincronización.
+
+No sobrecargar la pantalla con funciones administrativas que no sean necesarias para el cobrador.
+
+# 21. Pruebas obligatorias
+
+Implementar pruebas unitarias, pruebas de API y pruebas de integración.
+
+Casos mínimos:
+
+1. Una institución no puede consultar clientes de otra.
+2. Un cobrador no puede acceder a conexiones fuera de su asignación.
+3. No se puede confirmar una lectura sin fotografía obligatoria.
+4. Una lectura duplicada para la misma instalación y período se rechaza o se gestiona mediante un procedimiento explícito.
+5. La lectura histórica conserva el medidor correcto después de una sustitución.
+6. El consumo se calcula en el backend.
+7. Una tarifa nueva no altera liquidaciones históricas.
+8. Una liquidación no puede facturarse dos veces.
+9. Una factura puede recibir varios pagos parciales.
+10. Un pago puede distribuirse entre varias facturas.
+11. No se pueden aplicar importes superiores al disponible.
+12. Un reintento de sincronización no crea pagos duplicados.
+13. Un timeout de facturación electrónica no provoca una segunda emisión automática sin verificar el estado.
+14. Una sesión de caja cerrada no puede alterarse silenciosamente.
+15. Un gasto confirmado genera un único egreso de caja.
+16. Las reversiones conservan el movimiento original.
+17. Los registros archivados continúan disponibles para el historial.
+18. Los usuarios no pueden borrar físicamente registros operativos.
+19. La PWA conserva las fotografías pendientes de sincronización.
+20. Los archivos privados no son accesibles por usuarios no autorizados.
+
+# 22. Plan de implementación
+
+Implementar por fases. No comenzar generando todos los módulos de una sola vez.
+
+## Fase 1. Base del sistema
+
+- Proyecto Django.
+- Proyecto React.
+- PostgreSQL.
+- Autenticación.
+- Instituciones.
+- Usuarios y permisos.
+- Aislamiento multiempresa.
+- Auditoría inicial.
+- Migraciones.
+- Pruebas de seguridad básicas.
+
+**Criterio de aceptación:** dos instituciones pueden operar en el mismo sistema sin acceder a los datos de la otra.
+
+## Fase 2. Padrón y geolocalización
+
+- Clientes.
+- Conexiones.
+- Medidores.
+- Instalaciones.
+- Zonas.
+- Barrios.
+- Fotografías de vivienda.
+- Coordenadas.
+- Mapa Leaflet.
+- Filtros y permisos.
+
+**Criterio de aceptación:** el administrador puede gestionar el padrón y visualizar las conexiones autorizadas en el mapa.
+
+## Fase 3. Recorridos y lecturas
+
+- Asignaciones.
+- Flujo de captura.
+- Fotografía obligatoria.
+- Lectura anterior.
+- Cálculo de consumo.
+- Fotografías adicionales.
+- Comprobante PDF.
+- PWA.
+- Cola de sincronización.
+
+**Criterio de aceptación:** un cobrador completa un recorrido y sincroniza lecturas sin duplicar registros.
+
+## Fase 4. Tarifas y liquidaciones
+
+- Configuración tarifaria.
+- Vigencias.
+- Cálculos.
+- Excepciones.
+- Historial.
+- Pruebas de importes.
+
+**Criterio de aceptación:** el sistema calcula liquidaciones reproducibles y conserva los valores históricos.
+
+## Fase 5. Facturación
+
+- Facturas.
+- Líneas.
+- Relación con lecturas y liquidaciones.
+- Modalidad de facturación.
+- Facturación local conforme a habilitaciones.
+- Adaptador para proveedor electrónico.
+- Estados y logs.
+- PDFs.
+- Ventas a crédito.
+
+La integración real con el proveedor electrónico dependerá de la documentación y credenciales autorizadas.
+
+**Criterio de aceptación:** no se duplican facturas y los estados fiscales reflejan las confirmaciones reales disponibles.
+
+## Fase 6. Pagos y recibos
+
+- Pagos.
+- Aplicación a facturas.
+- Pagos parciales.
+- Recibos.
+- Saldos.
+- Historial de cobranzas.
+- Reversiones.
+
+**Criterio de aceptación:** los saldos se calculan correctamente y cada cobro conserva su trazabilidad.
+
+## Fase 7. Caja y gastos
+
+- Apertura y cierre.
+- Movimientos.
+- Formas de pago.
+- Gastos referenciales.
+- Boleta interna PDF.
+- Rendición de cobradores.
+- Diferencias.
+
+**Criterio de aceptación:** los ingresos y egresos se reflejan una sola vez y las diferencias pueden auditarse.
+
+## Fase 8. Informes e integración futura
+
+- Panel de indicadores.
+- Informes.
+- Exportaciones.
+- API documentada.
+- Credenciales de integración.
+- Pruebas de aislamiento.
+- Documentación técnica.
+- Preparación para integraciones futuras.
+
+# 23. Documentación y entregables de desarrollo
+
+En cada fase, entregar:
+
+- Código fuente organizado.
+- Modelos y migraciones.
+- Endpoints.
+- Serializadores.
+- Servicios de negocio.
+- Permisos.
+- Pantallas funcionales.
+- Pruebas automatizadas.
+- Archivo de configuración de ejemplo.
+- Instrucciones de instalación.
+- Variables de entorno documentadas.
+- Comandos de ejecución.
+- Procedimiento de despliegue.
+- Notas de seguridad.
+- Decisiones técnicas.
+- Limitaciones conocidas.
+
+Mantener un archivo de decisiones técnicas para registrar por qué se eligió cada solución importante.
+
+No marcar una funcionalidad como terminada si solo existe su pantalla, pero no están implementados el backend, las validaciones y las pruebas.
+
+# 24. Decisiones que requieren confirmación
+
+Antes de cerrar las reglas de negocio definitivas, identificar y consultar:
+
+1. ¿Qué modalidades tarifarias se necesitan inicialmente: cargo fijo, consumo por metro cúbico, escalas, mínimos u otras?
+2. ¿Se permiten varias conexiones por cliente?
+3. ¿Se permite facturar varias lecturas juntas y cómo se controla la facturación parcial?
+4. ¿Qué política se utilizará para aplicar automáticamente pagos parciales?
+5. ¿Qué proveedor externo realizará la facturación electrónica y cuál es su documentación API?
+6. ¿Qué modalidad de documento autoimpreso tiene habilitada cada institución?
+7. ¿Qué reglas se aplicarán para vencimientos, mora, recargos y suspensión?
+8. ¿Los cobradores podrán registrar pagos en la primera versión o solamente tomar lecturas?
+9. ¿Se admitirá registrar lecturas sin GPS cuando el dispositivo no tenga ubicación disponible?
+10. ¿Qué política de conservación y eliminación segura de archivos locales se utilizará en los dispositivos móviles?
+
+No inventar respuestas a estas preguntas. Se puede desarrollar la infraestructura necesaria dejando configurables las reglas todavía no definidas.
+
+# 25. Instrucción final de ejecución
+
+Comienza analizando esta especificación y prepara:
+
+1. Un resumen de arquitectura.
+2. Un diagrama de módulos y dependencias.
+3. La estructura propuesta de carpetas del backend y frontend.
+4. El modelo entidad-relación inicial.
+5. La matriz de roles y permisos.
+6. Los riesgos técnicos y las decisiones pendientes.
+7. Un plan de trabajo con entregables verificables por fase.
+
+Después de presentar esa propuesta, comienza por la Fase 1, salvo que detectes una decisión bloqueante.
+
+Implementa código real, con pruebas y documentación. No generes únicamente ejemplos ilustrativos.
+
+Mantén la coherencia de los modelos entre fases y verifica que cada cambio respete el aislamiento institucional, la auditoría y la integridad financiera.
+
+El objetivo es desarrollar una plataforma profesional, segura, escalable y mantenible para Koape Sistemas EAS, preparada para operar con varias aguateras y crecer progresivamente hacia un sistema integral de gestión.

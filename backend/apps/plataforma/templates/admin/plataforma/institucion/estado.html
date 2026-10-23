@@ -1,0 +1,17 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div class="module" style="max-width:640px;padding:16px">
+  <h2>{{ institucion.nombre }} ({{ institucion.codigo }})</h2>
+  <p>Estado actual: <strong>{{ institucion.get_estado_display }}</strong>{% if institucion.motivo_estado %} — {{ institucion.motivo_estado }}{% endif %}</p>
+  <ul>
+    <li><b>Suspendida</b>: nadie de la institución puede ingresar y se cierran las sesiones abiertas. Los datos se conservan.</li>
+    <li><b>Archivada</b>: la institución dejó de usar el sistema. Tampoco se borra nada.</li>
+    <li><b>Activa</b>: vuelve a funcionar normalmente.</li>
+  </ul>
+  <form method="post">{% csrf_token %}
+    {{ formulario.as_p }}
+    <input type="submit" class="default" value="Guardar">
+    <a class="button" href="{% url 'admin:plataforma_institucion_changelist' %}">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

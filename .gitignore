@@ -1,0 +1,23 @@
+# Entornos y dependencias (se regeneran)
+backend/venv/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+__pycache__/
+*.pyc
+backend/staticfiles/
+
+# Configuración y datos de cada instalación (nunca al repositorio)
+backend/.env
+frontend/.env.local
+backend/datos/
+backend/respaldos/
+backend/media/
+backend/privado/
+.run/
+logs/
+herramientas/
+https/
+
+# Paquetes de actualización generados
+Claude outputs/

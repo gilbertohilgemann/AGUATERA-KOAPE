@@ -1,0 +1,48 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{% comment %}
+Marca Koape Sistemas EAS (manual 2026): paleta #EA284E #D9438D #F9C610 #ECF31A #232323 #97989C #C9CACC,
+Exo 2 para títulos y Segoe UI para textos.
+{% endcomment %}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | Koape Aguateras{% endblock %}
+{% block extrahead %}
+<link rel="icon" type="image/png" href="{% static 'marca/favicon.png' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root, html[data-theme="light"] {
+    --primary: #EA284E;
+    --secondary: #232323;
+    --accent: #F9C610;
+    --primary-fg: #fff;
+    --header-color: #fff;
+    --header-branding-color: #fff;
+    --header-bg: #232323;
+    --header-link-color: #fff;
+    --breadcrumbs-bg: #D9438D;
+    --breadcrumbs-link-fg: #fff;
+    --link-fg: #c21d40;
+    --link-hover-color: #D9438D;
+    --link-selected-fg: #c21d40;
+    --button-bg: #EA284E;
+    --button-hover-bg: #D9438D;
+    --default-button-bg: #232323;
+    --default-button-hover-bg: #D9438D;
+    --selected-row: #fdf3d0;
+    --font-family-primary: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  #header { border-bottom: 4px solid transparent; border-image: linear-gradient(90deg,#D9438D,#EA284E,#F9C610,#ECF31A) 1; }
+  #branding h1, h1, h2, .module caption, .module h2 { font-family: "Exo 2", "Segoe UI", sans-serif; }
+  #branding h1 a { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.02em; }
+  #branding img { height: 34px; width: auto; }
+  .marca-sub { font-weight:500; font-size:.8em; opacity:.8; }
+</style>
+{% endblock %}
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}" style="display:flex;align-items:center;gap:10px">
+  <img src="{% static 'marca/isotipo-koape.png' %}" alt="" style="height:34px">
+  <span style="font-family:'Exo 2','Segoe UI',sans-serif;font-weight:800">KOAPE <span class="marca-sub">· Aguateras</span></span>
+</a></div>
+{% if user.is_anonymous %}{% include "admin/color_theme_toggle.html" %}{% endif %}
+{% endblock %}
+{% block nav-global %}{% endblock %}

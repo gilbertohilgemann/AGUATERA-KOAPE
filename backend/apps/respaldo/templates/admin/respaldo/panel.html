@@ -1,0 +1,42 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div class="module" style="max-width:760px;padding:16px">
+  <h2>Backup completo</h2>
+  <p>Genera un único archivo .zip con:</p>
+  <ul>
+    <li>Todo el código (backend, frontend y scripts), <code>media/</code> y los archivos privados (fotos de medidores, comprobantes).</li>
+    <li>La base de datos (copia consistente de SQLite, o <code>pg_dump</code> si está en PostgreSQL).</li>
+    <li>Un <code>manifiesto.json</code> con la fecha, el motor y advertencias.</li>
+  </ul>
+  <p>Se excluyen siempre <code>venv/</code>, <code>node_modules/</code>, <code>__pycache__/</code>, <code>dist/</code>,
+     <code>.vite/</code>, <code>staticfiles/</code> y cualquier rastro del repositorio (<code>.git/</code>, <code>.github/</code>,
+     <code>.gitignore</code>, <code>.gitattributes</code>, <code>.gitmodules</code>).</p>
+  <p style="color:#c21d40">⚠ El archivo contiene los datos de todas las instituciones y el archivo <code>.env</code>. Guárdelo en un lugar seguro.</p>
+  <p>💡 Si el sistema está en PostgreSQL y quiere llevar los datos a otra PC sin restaurar un volcado SQL, use antes
+     <b>Migración de base de datos → Traer datos a SQLite</b>.</p>
+  <form method="post" action="{% url 'admin:respaldo_descargar' %}">{% csrf_token %}
+    <input type="submit" class="default" value="Generar y descargar backup">
+  </form>
+</div>
+
+<div class="module" style="max-width:760px;padding:16px;margin-top:16px">
+  <h2>Estado de seguridad y respaldos</h2>
+  <ul style="list-style:none;padding:0">
+    {% for h in hallazgos %}
+      <li style="margin:6px 0;padding:6px 8px;border-left:4px solid {% if h.nivel == 'grave' %}#c21d40{% elif h.nivel == 'aviso' %}#d99a00{% else %}#16a34a{% endif %}">
+        {{ h.mensaje }}{% if h.accion %}<br><small>→ {{ h.accion }}</small>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  <h3>Respaldos guardados en el servidor</h3>
+  <p>Se conservan los últimos {{ conservar }} (automáticos y manuales); los anteriores se borran solos.</p>
+  {% if recientes %}<ul>{% for r in recientes %}<li><a href="{% url 'admin:respaldo_archivo' r.nombre %}">Descargar</a> · <code>{{ r.nombre }}</code> · {{ r.fecha|date:"d/m/Y H:i" }} · {{ r.megas }} MB</li>{% endfor %}</ul>
+  {% else %}<p>Ninguno todavía.</p>{% endif %}
+  <h3>Restaurar</h3>
+  <p>Se hace desde la consola del servidor (detiene el sistema, verifica el archivo, guarda un respaldo de lo actual y vuelve a arrancar):</p>
+  <pre>Windows:          start.bat verificar  ruta\del\respaldo.zip
+                  start.bat restaurar  ruta\del\respaldo.zip
+Linux:            ./start.sh restaurar /ruta/del/respaldo.zip
+Servidor (root):  bash scripts/servidor/restaurar.sh /ruta/del/respaldo.zip</pre>
+</div>
+{% endblock %}

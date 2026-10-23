@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/*
+  Marca Koape Sistemas EAS — Manual 2026
+  Paleta: #EA284E #D9438D #F9C610 #ECF31A #232323 #97989C #C9CACC
+  Tipografías: Exo 2 (títulos) · Segoe UI (textos)
+*/
+@theme {
+  --color-koape-rojo: #EA284E;
+  --color-koape-magenta: #D9438D;
+  --color-koape-amarillo: #F9C610;
+  --color-koape-lima: #ECF31A;
+  --color-koape-tinta: #232323;
+  --color-koape-gris: #97989C;
+  --color-koape-gris-claro: #C9CACC;
+  --color-koape-fondo: #F5F5F6;
+
+  --font-titulo: "Exo 2", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+@layer base {
+  html { color: var(--color-koape-tinta); background: var(--color-koape-fondo); }
+  h1, h2, h3, h4 { font-family: var(--font-titulo); }
+}
+
+@utility degradado-koape {
+  background-image: linear-gradient(90deg, #D9438D 0%, #EA284E 45%, #F9C610 80%, #ECF31A 100%);
+}
+
+/* Utilidades propias (en Tailwind v4 solo se puede hacer @apply de utilidades declaradas con @utility). */
+@utility boton {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility boton-primario {
+  @apply boton bg-koape-rojo text-white hover:bg-koape-magenta;
+}
+@utility boton-secundario {
+  @apply boton border border-koape-gris-claro bg-white text-koape-tinta hover:border-koape-magenta hover:text-koape-magenta;
+}
+@utility campo {
+  @apply w-full rounded-lg border border-koape-gris-claro bg-white px-3 py-2 text-sm outline-none focus:border-koape-magenta focus:ring-2 focus:ring-koape-magenta/20;
+}
+@utility etiqueta {
+  @apply mb-1 block text-xs font-semibold tracking-wide text-koape-gris uppercase;
+}
+@utility tarjeta {
+  @apply rounded-xl border border-koape-gris-claro/70 bg-white shadow-sm;
+}
+
+@layer components {
+  .tabla { @apply w-full text-left text-sm; }
+  .tabla th { @apply border-b border-koape-gris-claro px-3 py-2 text-xs font-semibold tracking-wide text-koape-gris uppercase; }
+  .tabla td { @apply border-b border-koape-gris-claro/50 px-3 py-2; }
+}
+
+/* Número de orden dentro de cada punto del mapa del recorrido (aplicación del cobrador). */
+.leaflet-tooltip.etiqueta-orden {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0;
+}
+.leaflet-tooltip.etiqueta-orden::before {
+  display: none;
+}

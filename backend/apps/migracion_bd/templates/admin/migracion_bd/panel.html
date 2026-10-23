@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div class="module" style="max-width:860px;padding:16px">
+  <h2>Estado actual</h2>
+  <p>Motor: <strong>{{ estado.motor }}</strong> · Base: <code>{{ estado.base }}</code>{% if estado.servidor %} · Servidor: <code>{{ estado.servidor }}</code>{% endif %}</p>
+  <p>💡 En desarrollo se trabaja en SQLite (cero configuración). En producción, PostgreSQL.</p>
+</div>
+
+<div class="module" style="max-width:860px;padding:16px;margin-top:16px">
+  <h2>1 · Migrar a PostgreSQL</h2>
+  <p>Copia todos los datos a una base PostgreSQL (se crea si no existe) sin perder nada. El sistema pasa a usarla al reiniciar.</p>
+  <p>⚠ Hágalo fuera del horario de uso: lo que se cargue entre la copia y el reinicio no se copia.</p>
+  <form method="post" action="{% url 'admin:migracion_bd_ejecutar' %}">{% csrf_token %}
+    {{ formulario.as_p }}
+    <button class="button" name="accion" value="probar">Probar conexión</button>
+    <button class="default" name="accion" value="a_postgres">Migrar a PostgreSQL</button>
+  </form>
+</div>
+
+<div class="module" style="max-width:860px;padding:16px;margin-top:16px">
+  <h2>2 · Volver a SQLite</h2>
+  <p>Copia todos los datos de PostgreSQL de vuelta a un archivo SQLite y cambia el motor. El archivo SQLite anterior se renombra a <code>.anterior</code>.</p>
+  <form method="post" action="{% url 'admin:migracion_bd_ejecutar' %}">{% csrf_token %}
+    <button class="button" name="accion" value="a_sqlite">Volver a SQLite</button>
+  </form>
+</div>
+
+<div class="module" style="max-width:860px;padding:16px;margin-top:16px">
+  <h2>3 · Traer datos de PostgreSQL a SQLite (sin cambiar de motor)</h2>
+  <p>💡 Úselo antes de generar un backup para llevar los datos reales a otra PC o servidor sin restaurar un volcado SQL a mano.</p>
+  <form method="post" action="{% url 'admin:migracion_bd_ejecutar' %}">{% csrf_token %}
+    <button class="button" name="accion" value="traer">Traer datos a SQLite</button>
+  </form>
+</div>
+<p>También disponible por terminal: <code>python manage.py migrate_to_postgres</code>.</p>
+{% endblock %}
