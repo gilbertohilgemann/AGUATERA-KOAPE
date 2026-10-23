@@ -7,7 +7,7 @@
 set -euo pipefail
 
 CUENTA="${1:-gilbertohilgemann}"
-DOMINIO="${2:-aguatera.koapesystem.com}"
+DOMINIO="${2:-aguateras.koapesystem.com}"
 CORREO="${3:-}"
 USUARIO=webuser
 REPO="AGUATERA-KOAPE"

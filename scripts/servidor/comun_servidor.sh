@@ -8,7 +8,7 @@ source "$RAIZ/scripts/comun.sh"   # leer_env / escribir_env / titulo / ok / avis
 USUARIO_APP="${USUARIO_APP:-webuser}"
 NOMBRE="koape-aguateras"                       # nombre de servicios, sitio y carpetas
 WEB_PUBLICA="/var/www/$NOMBRE"                   # copia compilada del frontend (fuera de /home: sin líos de permisos ni SELinux)
-DOMINIO_POR_DEFECTO="aguatera.koapesystem.com"
+DOMINIO_POR_DEFECTO="aguateras.koapesystem.com"
 
 como_app() { sudo -u "$USUARIO_APP" -H "$@"; }
 manage_app() { (cd "$BACKEND" && como_app "$PYTHON_VENV" manage.py "$@"); }

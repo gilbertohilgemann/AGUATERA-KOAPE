@@ -28,7 +28,7 @@ Formato: decisión · motivo · consecuencias.
 - **Diferencias con el Hotel**: no hay base maestra ni una base por empresa; el usuario es un modelo propio (ver D5); el ingreso no lleva la empresa en la ruta sino solo el código institucional.
 
 ### D4 · Despliegue
-- **Decisión**: VPS Fedora Cloud, dominio `aguatera.koapesystem.com` (todavía no creado), convive con otros proyectos (se agrega un sitio al servidor web existente sin tocar los demás).
+- **Decisión**: VPS Fedora Cloud, dominio `aguateras.koapesystem.com` (todavía no creado), convive con otros proyectos (se agrega un sitio al servidor web existente sin tocar los demás).
 - **Consecuencias**: `scripts/servidor/instalar_fedora.sh` usa ese dominio por defecto; el certificado HTTPS se obtiene cuando el DNS apunte al servidor (`scripts/servidor/https.sh`).
 
 ---

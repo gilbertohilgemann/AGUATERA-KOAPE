@@ -10,7 +10,7 @@ PostgreSQL **solo** su propio usuario y su base, sin tocar los demás.
 | Dato | Para qué | Dónde se carga |
 |---|---|---|
 | IP del VPS y acceso SSH como root | Instalar | — |
-| Dominio (por defecto `aguatera.koapesystem.com`) con un registro **A** apuntando a la IP del VPS | HTTPS (Let's Encrypt) | Panel DNS del dominio |
+| Dominio (por defecto `aguateras.koapesystem.com`) con un registro **A** apuntando a la IP del VPS | HTTPS (Let's Encrypt) | Panel DNS del dominio |
 | Correo para Let's Encrypt (avisos de vencimiento) | HTTPS | Al instalar |
 | Servidor de correo SMTP (servidor, puerto, usuario, contraseña) | PIN del portal y «¿Olvidó su contraseña?» | `configurar_correo.sh` (paso 5), cuando lo tenga |
 | Acceso al repositorio privado de GitHub | Bajar el código y actualizarlo | Clave de despliegue (paso 2) |
@@ -31,7 +31,7 @@ scp C:\proyectos_claude\AGUATERA-KOAPE\scripts\servidor\preparar_vps.sh root@IP-
 ```
 ```bash
 # en el VPS, como root
-bash /root/preparar_vps.sh gilbertohilgemann aguatera.koapesystem.com correo@koapesystem.com
+bash /root/preparar_vps.sh gilbertohilgemann aguateras.koapesystem.com correo@koapesystem.com
 ```
 
 Se puede volver a ejecutar: reutiliza el usuario, la clave y el código que ya existan. Los pasos siguientes explican
@@ -77,7 +77,7 @@ sudo -u webuser git clone github-aguateras:<usuario-de-github>/AGUATERA-KOAPE.gi
 ## 4. Instalar
 
 ```bash
-bash /home/webuser/AGUATERA-KOAPE/scripts/servidor/instalar_fedora.sh aguatera.koapesystem.com correo@koapesystem.com
+bash /home/webuser/AGUATERA-KOAPE/scripts/servidor/instalar_fedora.sh aguateras.koapesystem.com correo@koapesystem.com
 ```
 
 Muestra lo que va a hacer y pide confirmación. Instala lo necesario (Python, Node, PostgreSQL si no está), genera

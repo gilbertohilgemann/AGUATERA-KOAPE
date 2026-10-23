@@ -71,6 +71,11 @@ install.bat             (doble clic)
 start.bat               start | stop | status | restart | logs | update | red | red-quitar | https | respaldo | respaldo-programar | verificar ARCHIVO | restaurar ARCHIVO | seguridad | datos-prueba
 ```
 
+`python manage.py cargar_demos_itapua` crea dos aguateras de demostración, **DEMO-ENC** (Encarnación) y **DEMO-CAM**
+(Cambyretá), cada una con 20 abonados ubicados en su zona, medidores, tres meses de lecturas, facturas contado y a
+crédito con pagos y recibos, y deuda pendiente. Usuarios: `admin` (`Demo.Koape.2026`), `cobrador1` y `cajero1`
+(`Prueba.Koape.2026`). Es idempotente.
+
 `datos-prueba` carga en la institución DEMO un escenario completo para probar (8 clientes ubicados, tarifa,
 numeración de facturas, dos meses ya leídos listos para facturar y el recorrido del mes abierto para el celular) y
 los usuarios `cobrador1` y `cajero1` (contraseña `Prueba.Koape.2026`). Solo funciona en instituciones DEMO vacías.
@@ -78,13 +83,13 @@ los usuarios `cobrador1` y `cajero1` (contraseña `Prueba.Koape.2026`). Solo fun
 `start.bat` es un lanzador de una línea; la lógica vive en `start.ps1`. Los procesos corren en segundo plano
 sin ventanas; al detener se mata el árbol completo (`taskkill /T /F`).
 
-## Servidor (VPS Fedora Cloud · aguatera.koapesystem.com)
+## Servidor (VPS Fedora Cloud · aguateras.koapesystem.com)
 
 Guía completa paso a paso (clave de despliegue de GitHub, instalación, correo, respaldos): **`docs/DESPLIEGUE.md`**.
 
 ```bash
 # como root, con el proyecto en /home/webuser/AGUATERA-KOAPE
-bash scripts/servidor/instalar_fedora.sh aguatera.koapesystem.com correo@koapesystem.com
+bash scripts/servidor/instalar_fedora.sh aguateras.koapesystem.com correo@koapesystem.com
 bash scripts/servidor/actualizar.sh          # git pull + dependencias + migraciones + frontend
 bash scripts/servidor/https.sh               # reintenta el certificado cuando el DNS ya apunta al servidor
 bash scripts/servidor/restaurar.sh <zip>

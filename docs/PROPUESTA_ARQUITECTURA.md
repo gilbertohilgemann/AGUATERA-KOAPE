@@ -1,7 +1,7 @@
 # Koape Aguateras — Propuesta de arquitectura (Fase 0)
 
 Documento de arranque según la sección 25 de `informacion-tecnica.txt`, aplicando `Convenciones-de-Proyecto.txt`.
-Fecha: 20/10/2026. Estado: **aprobada**. Decisiones D1–D4 confirmadas el 20/10/2026 (D1: SQLite en desarrollo y PostgreSQL en producción · D2: base central · D3: reutilizar Hotel-Restaurante · D4: VPS Fedora Cloud, `aguatera.koapesystem.com`); detalle en `docs/DECISIONES.md`. Fase 1 implementada.
+Fecha: 20/10/2026. Estado: **aprobada**. Decisiones D1–D4 confirmadas el 20/10/2026 (D1: SQLite en desarrollo y PostgreSQL en producción · D2: base central · D3: reutilizar Hotel-Restaurante · D4: VPS Fedora Cloud, `aguateras.koapesystem.com`); detalle en `docs/DECISIONES.md`. Fase 1 implementada.
 
 ---
 
