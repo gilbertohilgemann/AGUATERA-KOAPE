@@ -66,6 +66,7 @@ AGUATERAS = [
         'codigo': 'DEMO-ENC', 'nombre': 'Aguatera Demo Encarnación', 'ruc': '80123456-7',
         'direccion': 'Av. Irrazábal 1250, Encarnación, Itapúa', 'telefono': '(071) 200 100',
         'centro': (Decimal('-27.330600'), Decimal('-55.866700')), 'timbrado': '15234567', 'semilla': 71,
+        'dispersion': ((-700, 700), (-350, 1200)),    # (lat, lng) en cienmilésimas de grado: casco urbano, sin el río
         'zonas': [('CENTRO', 'Centro de Encarnación', '#EA284E', [('CENTRO', 'Centro'), ('SAN-PEDRO', 'San Pedro')]),
                   ('COSTANERA', 'Costanera y Pacú Cuá', '#2B7FFF', [('PACU-CUA', 'Pacú Cuá'),
                                                                      ('VILLA-QUITERIA', 'Villa Quiteria')])],
@@ -76,6 +77,7 @@ AGUATERAS = [
         'codigo': 'DEMO-CAM', 'nombre': 'Junta de Saneamiento Demo Cambyretá', 'ruc': '80765432-1',
         'direccion': 'Ruta 6, Cambyretá, Itapúa', 'telefono': '(071) 240 200',
         'centro': (Decimal('-27.350000'), Decimal('-55.780000')), 'timbrado': '15876543', 'semilla': 83,
+        'dispersion': ((-900, 900), (-900, 900)),
         'zonas': [('URBANA', 'Zona urbana', '#EA284E', [('CENTRO', 'Centro'), ('SAN-ISIDRO', 'San Isidro')]),
                   ('RUTA-6', 'Sobre la Ruta 6', '#2B7FFF', [('KM-12', 'Km 12'), ('VIRGEN-FATIMA', 'Virgen de Fátima')])],
         'calles': ['Calle Principal', 'Calle San Isidro', 'Ruta 6 km 12', 'Calle Itapúa', 'Calle Virgen de Fátima',
@@ -171,8 +173,9 @@ class Command(BaseCommand):
             cliente = padron.crear_cliente(institucion=institucion, datos={
                 'Code': f'C-{n:04d}', 'nombre': nombre, 'documento': documento, 'direccion_referencia': direccion,
                 'correo': _correo(nombre, n), 'telefono': f'098{rng.randrange(1_000_000, 9_999_999)}'})
-            lat = centro_lat + Decimal(rng.randrange(-900, 900)) / Decimal(100000)
-            lng = centro_lng + Decimal(rng.randrange(-900, 900)) / Decimal(100000)
+            (lat_min, lat_max), (lng_min, lng_max) = d['dispersion']
+            lat = centro_lat + Decimal(rng.randrange(lat_min, lat_max)) / Decimal(100000)
+            lng = centro_lng + Decimal(rng.randrange(lng_min, lng_max)) / Decimal(100000)
             conexion = padron.crear_conexion(institucion=institucion, datos={
                 'Code': f'CX-{n:04d}', 'cliente': cliente, 'direccion': direccion, 'barrio': barrios[n % len(barrios)],
                 'latitud': lat, 'longitud': lng, 'metodo_ubicacion': 'mapa', 'estado': 'activa',
