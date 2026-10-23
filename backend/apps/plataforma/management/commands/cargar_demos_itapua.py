@@ -10,7 +10,8 @@ antiguo, deuda pendiente en los meses siguientes y el recorrido del mes abierto 
 
 Uso: python manage.py cargar_demos_itapua [--solo DEMO-ENC|DEMO-CAM]
 Idempotente: una aguatera que ya tiene conexiones no se toca. Solo para demostración.
-Usuarios: admin (Demo.Koape.2026, pide cambiarla) · cobrador1 y cajero1 (Prueba.Koape.2026).
+Usuarios: admin, cobrador1 y cajero1, los tres con la contraseña Acceso*2026 (no se pide cambiarla).
+Al repetir el comando también se restablece esa contraseña en los tres.
 """
 import random
 import uuid
@@ -28,18 +29,26 @@ from apps.cobranzas import servicios as cobranzas
 from apps.cobranzas.models import FormaPago
 from apps.facturacion import facturas
 from apps.facturacion import servicios as numeracion
-from apps.identidad.models import Permiso, Rol
+from apps.identidad.models import Permiso, Rol, Usuario
 from apps.lecturas import servicios as lecturas
 from apps.padron import servicios as padron
 from apps.padron.models import Conexion
-from apps.plataforma.management.commands.cargar_datos_prueba import CONTRASENA, FOTO, TARIFA, _mes, _usuario
+from apps.plataforma.management.commands.cargar_datos_prueba import FOTO, TARIFA, _mes
 from apps.plataforma.models import Institucion
 from apps.plataforma.servicios import crear_institucion
 from apps.recorridos import servicios as recorridos
 from apps.tarifas import servicios as tarifas
 from apps.territorio.models import Barrio, Zona
 
-CONTRASENA_ADMIN = 'Demo.Koape.2026'
+CONTRASENA = 'Acceso*2026'      # la misma para admin, cobrador1 y cajero1 (botones «Acceso como demo» del ingreso)
+
+
+def _usuario(institucion, nombre_usuario, nombre, roles):
+    usuario = Usuario(institucion=institucion, nombre_usuario=nombre_usuario, nombre=nombre)
+    usuario.set_password(CONTRASENA)
+    usuario.save()
+    usuario.roles.set(roles)
+    return usuario
 
 NOMBRES = [
     'María Benítez', 'Juan Ortiz', 'Rosa Giménez', 'Carlos Duarte', 'Ana Villalba', 'Pedro Cáceres', 'Lucía Ramírez',
@@ -49,6 +58,8 @@ NOMBRES = [
 APELLIDOS_ALTERNOS = ['Franco', 'Barrios', 'Mendoza', 'Portillo', 'Cabrera', 'Samudio', 'Domínguez', 'Colmán',
                       'Riveros', 'Ferreira', 'Bogado', 'Escobar', 'Galeano', 'Lezcano', 'Servín', 'Torales', 'Arce',
                       'Centurión', 'Maidana', 'Zárate']
+
+USUARIOS_DEMO = ('admin', 'cobrador1', 'cajero1')
 
 AGUATERAS = [
     {
@@ -92,7 +103,14 @@ class Command(BaseCommand):
                 continue
             existente = Institucion.objects.filter(codigo=datos['codigo']).first()
             if existente is not None and Conexion.objects.de(existente).exists():
-                self.stdout.write(f'  {datos["codigo"]}: ya tiene datos, no se toca.')
+                for usuario in Usuario.objects.filter(institucion=existente, nombre_usuario__in=USUARIOS_DEMO):
+                    usuario.set_password(CONTRASENA)
+                    usuario.debe_cambiar_contrasena = False
+                    usuario.intentos_fallidos = 0
+                    usuario.bloqueado_hasta = None
+                    usuario.save()
+                self.stdout.write(f'  {datos["codigo"]}: ya tiene datos, no se toca (contraseña de los 3 usuarios '
+                                  f'restablecida).')
                 continue
             with transaction.atomic():
                 self._crear(datos, existente)
@@ -106,8 +124,11 @@ class Command(BaseCommand):
 
         institucion = existente or crear_institucion(
             datos={'codigo': d['codigo'], 'nombre': d['nombre'], 'contacto': 'Institución de demostración'},
-            admin_usuario='admin', admin_contrasena=CONTRASENA_ADMIN, admin_nombre='Administrador demo',
+            admin_usuario='admin', admin_contrasena=CONTRASENA, admin_nombre='Administrador demo',
             admin_correo=f'admin.{d["codigo"].lower()}@ejemplo.com')
+        admin = Usuario.objects.get(institucion=institucion, nombre_usuario='admin')
+        admin.debe_cambiar_contrasena = False
+        admin.save(update_fields=['debe_cambiar_contrasena'])
         institucion.ruc, institucion.direccion, institucion.telefono = d['ruc'], d['direccion'], d['telefono']
         institucion.correo = f'info.{d["codigo"].lower()}@ejemplo.com'
         institucion.modalidad_facturacion = 'autoimpresa'

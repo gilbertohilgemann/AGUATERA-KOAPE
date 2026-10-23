@@ -7,6 +7,14 @@ import { Logo } from '../componentes/Logo'
 import { PieKoape } from '../componentes/PieKoape'
 import { guardarToken } from '../sesion/almacen'
 
+/** Accesos de demostración (solo si `VITE_ACCESO_DEMO=1` en frontend/.env): rellenan el formulario de un clic. */
+const ACCESOS_DEMO = [
+  { etiqueta: 'Administrador', codigo: 'DEMO-ENC', usuario: 'admin', contrasena: 'Acceso*2026' },
+  { etiqueta: 'Cobrador', codigo: 'DEMO-ENC', usuario: 'cobrador1', contrasena: 'Acceso*2026' },
+  { etiqueta: 'Cajero', codigo: 'DEMO-ENC', usuario: 'cajero1', contrasena: 'Acceso*2026' },
+]
+const HAY_ACCESO_DEMO = import.meta.env.VITE_ACCESO_DEMO === '1'
+
 /** Ingreso: código institucional + usuario + contraseña. */
 export function Ingreso() {
   const navegar = useNavigate()
@@ -96,6 +104,24 @@ export function Ingreso() {
             <p className="text-sm">
               <Link className="text-koape-rojo hover:underline" to={`/recuperar?codigo=${encodeURIComponent(codigo)}&usuario=${encodeURIComponent(usuario)}`}>¿Olvidó su contraseña?</Link>
             </p>
+            {HAY_ACCESO_DEMO && (
+              <div className="rounded-lg border border-dashed border-koape-gris-claro p-3">
+                <p className="mb-2 text-sm font-semibold">Acceso como demo <span className="font-normal text-koape-gris">· Aguatera Demo Encarnación</span></p>
+                <div className="grid grid-cols-3 gap-2">
+                  {ACCESOS_DEMO.map((a) => (
+                    <button key={a.usuario} type="button" className="boton-secundario" onClick={() => {
+                      setCodigo(a.codigo)
+                      setUsuario(a.usuario)
+                      setContrasena(a.contrasena)
+                      setError('')
+                    }}>
+                      {a.etiqueta}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-xs text-koape-gris">Completa el código, el usuario y la contraseña. Luego toque «Ingresar».</p>
+              </div>
+            )}
             <p className="rounded-lg bg-koape-fondo p-3 text-sm">
               ¿Es usuario del servicio de agua? <Link className="font-semibold text-koape-rojo hover:underline" to="/portal">Consulte su cuenta aquí</Link>.
             </p>

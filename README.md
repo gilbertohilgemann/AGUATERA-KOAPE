@@ -73,8 +73,9 @@ start.bat               start | stop | status | restart | logs | update | red | 
 
 `python manage.py cargar_demos_itapua` crea dos aguateras de demostración, **DEMO-ENC** (Encarnación) y **DEMO-CAM**
 (Cambyretá), cada una con 20 abonados ubicados en su zona, medidores, tres meses de lecturas, facturas contado y a
-crédito con pagos y recibos, y deuda pendiente. Usuarios: `admin` (`Demo.Koape.2026`), `cobrador1` y `cajero1`
-(`Prueba.Koape.2026`). Es idempotente.
+crédito con pagos y recibos, y deuda pendiente. Usuarios: `admin`, `cobrador1` y `cajero1`, los tres con
+`Acceso*2026`. Es idempotente. El ingreso muestra los botones «Acceso como demo» de DEMO-ENC mientras `frontend/.env` tenga
+`VITE_ACCESO_DEMO=1` (para un sistema real, bórrelo y recompile).
 
 `datos-prueba` carga en la institución DEMO un escenario completo para probar (8 clientes ubicados, tarifa,
 numeración de facturas, dos meses ya leídos listos para facturar y el recorrido del mes abierto para el celular) y

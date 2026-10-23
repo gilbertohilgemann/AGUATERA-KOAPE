@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  /** «1» muestra en el ingreso los botones de acceso de la aguatera demo (frontend/.env). */
+  readonly VITE_ACCESO_DEMO?: string
   /** URL completa de la API (solo si el backend está en otro host). */
   readonly VITE_API_URL?: string
   /** Puerto del backend; lo escribe el instalador en frontend/.env.local. */

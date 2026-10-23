@@ -7,6 +7,7 @@ from django.test import TestCase
 from apps.cobranzas.models import Pago, Recibo
 from apps.facturacion.models import Factura
 from apps.lecturas.models import Lectura
+from apps.identidad.models import Usuario
 from apps.padron.models import Cliente, Conexion, Medidor
 from apps.plataforma.models import Institucion
 from apps.territorio.models import Zona
@@ -45,3 +46,18 @@ class DemosItapuaTest(TestCase):
         call_command('cargar_demos_itapua', stdout=salida)
         self.assertIn('ya tiene datos', salida.getvalue())
         self.assertEqual(Cliente.objects.count(), 40)
+
+    def test_los_tres_usuarios_entran_con_la_misma_contrasena(self):
+        for codigo in ('DEMO-ENC', 'DEMO-CAM'):
+            for nombre in ('admin', 'cobrador1', 'cajero1'):
+                usuario = Usuario.objects.get(institucion__codigo=codigo, nombre_usuario=nombre)
+                self.assertTrue(usuario.check_password('Acceso*2026'), f'{codigo}/{nombre}')
+                self.assertFalse(usuario.debe_cambiar_contrasena)
+
+    def test_repetir_restablece_la_contrasena(self):
+        usuario = Usuario.objects.get(institucion__codigo='DEMO-ENC', nombre_usuario='cajero1')
+        usuario.set_password('Otra.Clave.1')
+        usuario.save()
+        call_command('cargar_demos_itapua', stdout=StringIO())
+        usuario.refresh_from_db()
+        self.assertTrue(usuario.check_password('Acceso*2026'))
