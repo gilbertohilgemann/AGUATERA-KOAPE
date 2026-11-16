@@ -14,6 +14,23 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="diagnostico" style="display:none;font:14px/1.4 sans-serif;padding:16px;color:#232323"></div>
+    <script>
+      /* Diagnóstico (ES5): si la app no arranca en un navegador viejo (POS Android), muestra el motivo en pantalla. */
+      (function () {
+        function mostrar(msg) {
+          var d = document.getElementById('diagnostico');
+          var r = document.getElementById('root');
+          if (!d || (r && r.childNodes.length)) return;
+          d.style.display = 'block';
+          d.innerHTML = '<h3>Koape · no se pudo iniciar</h3><p>' + msg + '</p><p style="word-break:break-all;color:#666">' + navigator.userAgent + '</p>';
+        }
+        window.addEventListener('error', function (e) { mostrar(String(e.message || 'Error de carga') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')); });
+        window.addEventListener('unhandledrejection', function (e) { mostrar(String(e.reason && e.reason.message || e.reason)); });
+        setTimeout(function () { mostrar('La aplicación no arrancó (navegador posiblemente desactualizado).'); }, 6000);
+      })();
+    </script>
+    <script nomodule>document.getElementById('diagnostico').style.display='block';document.getElementById('diagnostico').innerHTML='<h3>Koape</h3><p>Este navegador es demasiado antiguo.</p><p>'+navigator.userAgent+'</p>';</script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
