@@ -43,6 +43,7 @@ class TicketTests(BaseFacturas):
             r = self.cob.get(url + parametro)
             self.assertEqual((r.status_code, r['Content-Type']), (200, 'text/plain; charset=utf-8'))
             texto = r.content.decode('utf-8')
+            self.assertTrue(texto.isascii(), texto)                      # sin tildes: la ticketera usa CP437
             self.assertIn('TOTAL Gs.', texto)
             self.assertIn('28.000', texto)
             self.assertTrue(all(len(linea) <= columnas for linea in texto.split(chr(10))), texto)

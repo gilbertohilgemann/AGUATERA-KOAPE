@@ -119,9 +119,18 @@ def generar_texto(lectura, ancho_mm: int = 58) -> str:
     térmica con RawBT: la app lo convierte a la codificación de la impresora, así que lleva tildes y «ñ» normales.
     """
     import textwrap
+    import unicodedata
     columnas = 32 if int(ancho_mm) != 80 else 48
+
+    def ascii_puro(texto):
+        # Las ticketeras suelen usar CP437: una tilde viaja como 2 bytes, se imprime como símbolo raro y rompe el
+        # ancho de la línea. Se manda sin tildes (á→a, ñ→n, º→o, ³→3) para que salga igual en cualquier impresora.
+        for antes, despues in (('×', 'x'), ('·', '-'), ('—', '-'), ('–', '-'), ('«', '"'), ('»', '"')):
+            texto = texto.replace(antes, despues)
+        return unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('ascii')
+
     salida = []
-    for item in contenido(lectura):
+    for item in [tuple(ascii_puro(str(x)) for x in i) for i in contenido(lectura)]:
         tipo = item[0]
         if tipo == 'linea':
             salida.append('-' * columnas)
