@@ -113,6 +113,33 @@ def contenido(lectura) -> list[tuple]:
     return r
 
 
+def generar_texto(lectura, ancho_mm: int = 58) -> str:
+    """
+    El mismo ticket en texto plano (32 columnas en papel de 58 mm, 48 en 80 mm) para mandarlo directo a la impresora
+    térmica con RawBT: la app lo convierte a la codificación de la impresora, así que lleva tildes y «ñ» normales.
+    """
+    import textwrap
+    columnas = 32 if int(ancho_mm) != 80 else 48
+    salida = []
+    for item in contenido(lectura):
+        tipo = item[0]
+        if tipo == 'linea':
+            salida.append('-' * columnas)
+        elif tipo in ('titulo', 'texto', 'subtitulo'):
+            texto = str(item[1]).upper() if tipo == 'titulo' else str(item[1])
+            salida += [parte.center(columnas).rstrip() for parte in textwrap.wrap(texto, columnas) or ['']]
+        elif tipo == 'nota':
+            salida += textwrap.wrap(str(item[1]), columnas) or ['']
+        else:                                           # par / negrita_par: etiqueta a la izquierda, valor a la derecha
+            etiqueta, valor = str(item[1]), str(item[2])
+            if len(etiqueta) + len(valor) + 1 <= columnas:
+                salida.append(etiqueta + ' ' * (columnas - len(etiqueta) - len(valor)) + valor)
+            else:
+                salida += textwrap.wrap(etiqueta, columnas) or ['']
+                salida += [parte.rjust(columnas) for parte in textwrap.wrap(valor, columnas) or ['']]
+    return chr(10).join(salida) + chr(10) * 4
+
+
 def generar_ticket(lectura, ancho_mm: int = 58) -> bytes:
     from reportlab.lib.units import mm
     from reportlab.lib.utils import simpleSplit

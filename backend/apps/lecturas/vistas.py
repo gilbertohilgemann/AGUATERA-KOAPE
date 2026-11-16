@@ -20,7 +20,7 @@ from comun.vistas import VistaInstitucional
 
 from . import servicios
 from .comprobante import generar_pdf
-from .ticket import generar_ticket
+from .ticket import generar_texto, generar_ticket
 from .models import Lectura
 from .serializadores import (AutorizarSerializer, CorregirSerializer, LecturaSerializer, MotivoSerializer,
                              RegistroLecturaSerializer)
@@ -44,8 +44,12 @@ class _Base(VistaInstitucional):
                 .prefetch_related('fotos'))
 
     def _ticket(self, lectura):
-        """Ticket para impresora térmica: `?ancho=58` (por defecto) u `80` mm."""
+        """Ticket para impresora térmica: `?ancho=58` (por defecto) u `80` mm; `?formato=texto` para imprimir directo."""
         ancho = 80 if self.request.query_params.get('ancho') == '80' else 58
+        if self.request.query_params.get('formato') == 'texto':
+            respuesta = HttpResponse(generar_texto(lectura, ancho), content_type='text/plain; charset=utf-8')
+            respuesta['Cache-Control'] = 'private, no-store'
+            return respuesta
         respuesta = HttpResponse(generar_ticket(lectura, ancho), content_type='application/pdf')
         respuesta['Content-Disposition'] = f'inline; filename="ticket-{lectura.comprobante}.pdf"'
         respuesta['Cache-Control'] = 'private, no-store'

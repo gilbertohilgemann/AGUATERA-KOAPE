@@ -12,21 +12,51 @@ export function guardarAnchoTicket(ancho: '58' | '80') {
   try { localStorage.setItem(CLAVE_ANCHO, ancho) } catch { /* sin almacenamiento: queda 58 mm */ }
 }
 
+/** UTF-8 a base64 (btoa solo acepta Latin-1). */
+function base64Utf8(texto: string): string {
+  return btoa(unescape(encodeURIComponent(texto)))
+}
+
 /**
- * Abre el ticket (PDF angosto) para imprimirlo o compartirlo con la aplicación de la impresora Bluetooth.
- * Devuelve el mensaje de error, o '' si se abrió.
+ * Intenta imprimir directo en la ticketera con la app RawBT (en el Sunmi V2 Pro maneja la impresora integrada).
+ * Si RawBT no está instalada el navegador no cambia de aplicación; devuelve true si la app se abrió.
+ */
+function imprimirConRawBT(texto: string): Promise<boolean> {
+  return new Promise((resolver) => {
+    let abierta = false
+    const marcar = () => { if (document.hidden) abierta = true }
+    const alSalir = () => { abierta = true }
+    document.addEventListener('visibilitychange', marcar)
+    window.addEventListener('pagehide', alSalir)
+    window.addEventListener('blur', alSalir)
+    window.location.href = `intent:base64,${base64Utf8(texto)}#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;`
+    setTimeout(() => {
+      document.removeEventListener('visibilitychange', marcar)
+      window.removeEventListener('pagehide', alSalir)
+      window.removeEventListener('blur', alSalir)
+      resolver(abierta)
+    }, 1500)
+  })
+}
+
+/**
+ * Imprime el ticket directo en la ticketera (RawBT); si no la encuentra, lo abre como PDF (angosto) para
+ * imprimirlo o compartirlo. Devuelve el mensaje de error, o '' si salió bien.
  */
 export async function abrirTicket(api: AxiosInstance, comprobante: string): Promise<string> {
-  const ventana = window.open('', '_blank')
+  const ruta = `cobrador/lecturas/${comprobante}/ticket/`
+  const ancho = anchoTicket()
   try {
-    const r = await api.get<Blob>(`cobrador/lecturas/${comprobante}/ticket/`, { params: { ancho: anchoTicket() }, responseType: 'blob' })
-    const url = URL.createObjectURL(r.data)
-    if (ventana) ventana.location.href = url
-    else window.location.href = url
+    const [texto, pdf] = await Promise.all([
+      api.get<string>(ruta, { params: { ancho, formato: 'texto' }, responseType: 'text', transformResponse: (d) => d }),
+      api.get<Blob>(ruta, { params: { ancho }, responseType: 'blob' }),
+    ])
+    if (await imprimirConRawBT(texto.data)) return ''
+    const url = URL.createObjectURL(pdf.data)
+    window.location.href = url
     setTimeout(() => URL.revokeObjectURL(url), 60_000)
     return ''
   } catch (e) {
-    ventana?.close()
     return mensajeDeError(e)
   }
 }

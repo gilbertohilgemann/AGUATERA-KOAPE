@@ -278,7 +278,7 @@ export function TomarLectura() {
             <>
               <p className="text-lg font-bold text-emerald-700">✓ Lectura registrada</p>
               <p className="text-sm">Comprobante <b>{resultado.comprobante}</b>{resultado.consumo ? <> · consumo <b>{fmt(resultado.consumo)}</b></> : null}</p>
-              {enRed && <button className="boton-secundario w-full py-3 text-lg" onClick={() => { const c = resultado.comprobante; if (c) void abrirTicket(api, c).then(setError) }}>🧾 Imprimir ticket</button>}
+              {enRed && <button className="boton-secundario w-full py-3 text-lg" onClick={() => { const c = resultado.comprobante; if (c) void abrirTicket(api, c).then(setError) }}>Imprimir ticket</button>}
               {resultado.estado === 'revision' && <Aviso tipo="error">Quedó en revisión: {resultado.motivo_revision}. La oficina la va a revisar.</Aviso>}
               <Deudas deudas={resultado.deudas} />
             </>

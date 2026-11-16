@@ -37,6 +37,16 @@ class TicketTests(BaseFacturas):
         admin_de(otra)
         self.assertEqual(cliente_de(otra).get(oficina).status_code, 404)        # aislamiento
 
+    def test_texto_plano_para_impresion_directa(self):
+        url = f'/api/v1/cobrador/lecturas/{self.nov.lectura.comprobante}/ticket/'
+        for parametro, columnas in (('?formato=texto', 32), ('?formato=texto&ancho=80', 48)):
+            r = self.cob.get(url + parametro)
+            self.assertEqual((r.status_code, r['Content-Type']), (200, 'text/plain; charset=utf-8'))
+            texto = r.content.decode('utf-8')
+            self.assertIn('TOTAL Gs.', texto)
+            self.assertIn('28.000', texto)
+            self.assertTrue(all(len(linea) <= columnas for linea in texto.split(chr(10))), texto)
+
     def test_en_revision_no_tiene_aranceles_todavia(self):
         lectura = self.nov.lectura
         Lectura.objects.filter(pk=lectura.pk).update(estado=Lectura.Estado.REVISION, motivo_revision='lectura_menor')
